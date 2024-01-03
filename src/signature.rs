@@ -1,10 +1,11 @@
-use crate::secp256k1::{Secp256k1, Secp256k1ScalarFelt};
+use crate::secp256k1::{Secp256k1, Secp256k1ScalarFelt, Secp256k1ScalarFieldModulus};
 use lambdaworks_math::{
-    cyclic_group::IsGroup, elliptic_curve::traits::IsEllipticCurve, unsigned_integer::element::U256,
+    cyclic_group::IsGroup, elliptic_curve::traits::IsEllipticCurve,
+    field::fields::montgomery_backed_prime_fields::IsModulus, unsigned_integer::element::U256,
 };
 use rand::Rng;
 
-pub(crate) struct ECDSA;
+pub(crate) struct EllipticCurveDigitalSignatureAlgorithm;
 
 #[derive(Debug, PartialEq, Eq)]
 pub(crate) struct ECDSASignature {
@@ -12,25 +13,21 @@ pub(crate) struct ECDSASignature {
     s: Secp256k1ScalarFelt,
 }
 
+pub(crate) struct RandomScalarGenerator;
+
 impl ECDSASignature {
     fn new(r: Secp256k1ScalarFelt, s: Secp256k1ScalarFelt) -> Self {
         Self { r, s }
     }
 }
 
-pub(crate) trait IsEllipticCurveDigitalSignatureAlgorithm {
-    fn random_scalar() -> Secp256k1ScalarFelt {
-        let mut rng = rand::thread_rng();
-        Secp256k1ScalarFelt::new(U256::from_limbs([
-            rng.gen(),
-            rng.gen(),
-            rng.gen(),
-            rng.gen(),
-        ]))
-    }
-
-    fn sign(z: Secp256k1ScalarFelt, private_key: Secp256k1ScalarFelt) -> ECDSASignature {
-        let k = Self::random_scalar();
+impl EllipticCurveDigitalSignatureAlgorithm {
+    fn sign(
+        z: Secp256k1ScalarFelt,
+        private_key: Secp256k1ScalarFelt,
+        random: &mut impl IsRandomScalarGenerator,
+    ) -> ECDSASignature {
+        let k = random.random_scalar();
         let R = Secp256k1::generator()
             .operate_with_self(k.representative())
             .to_affine();
@@ -41,19 +38,39 @@ pub(crate) trait IsEllipticCurveDigitalSignatureAlgorithm {
     }
 }
 
-impl IsEllipticCurveDigitalSignatureAlgorithm for ECDSA {}
+pub(crate) trait IsRandomScalarGenerator {
+    fn random_scalar(&mut self) -> Secp256k1ScalarFelt;
+}
+
+impl IsRandomScalarGenerator for RandomScalarGenerator {
+    fn random_scalar(&mut self) -> Secp256k1ScalarFelt {
+        let mut rng = rand::thread_rng();
+
+        let mut representative = U256::from_limbs([rng.gen(), rng.gen(), rng.gen(), rng.gen()]);
+
+        while representative >= Secp256k1ScalarFieldModulus::MODULUS {
+            representative = U256::from_limbs([rng.gen(), rng.gen(), rng.gen(), rng.gen()]);
+        }
+
+        Secp256k1ScalarFelt::new(representative)
+    }
+}
 
 #[cfg(test)]
 pub mod tests {
     use lambdaworks_math::{traits::ByteConversion, unsigned_integer::element::U256};
 
-    use crate::{hash::hash256, secp256k1::Secp256k1ScalarFelt, signature::ECDSASignature};
+    use crate::{
+        hash::hash256,
+        secp256k1::Secp256k1ScalarFelt,
+        signature::{ECDSASignature, EllipticCurveDigitalSignatureAlgorithm as ECDSA},
+    };
 
-    use super::IsEllipticCurveDigitalSignatureAlgorithm;
+    use super::IsRandomScalarGenerator;
 
-    struct TestECDSA;
-    impl IsEllipticCurveDigitalSignatureAlgorithm for TestECDSA {
-        fn random_scalar() -> Secp256k1ScalarFelt {
+    struct TestRandomScalarGenerator;
+    impl IsRandomScalarGenerator for TestRandomScalarGenerator {
+        fn random_scalar(&mut self) -> Secp256k1ScalarFelt {
             Secp256k1ScalarFelt::from(1234567890)
         }
     }
@@ -67,7 +84,7 @@ pub mod tests {
             U256::from_bytes_be(&hash256("my message".as_bytes())).unwrap(),
         );
 
-        let signature = TestECDSA::sign(z, private_key);
+        let signature = ECDSA::sign(z, private_key, &mut TestRandomScalarGenerator);
         let signature_expected = ECDSASignature::new(
             Secp256k1ScalarFelt::from_hex_unchecked(
                 "2b698a0f0a4041b77e63488ad48c23e8e8838dd1fb7520408b121697b782ef22",

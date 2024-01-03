@@ -75,21 +75,24 @@ impl EllipticCurveDigitalSignatureAlgorithm {
             return false;
         }
 
-        if signature.r == ScalarFelt::zero() || signature.s == ScalarFelt::zero() {
-            return false;
+        if signature.r != ScalarFelt::zero() {
+            if let Ok(s_inv) = signature.s.inv() {
+                let z = ScalarFelt::new(U256::from_bytes_be(&hash256(z)).unwrap());
+                let u = z * &s_inv;
+                let v = &signature.r * s_inv;
+                let point = Secp256k1::generator()
+                    .operate_with_self(u.representative())
+                    .operate_with(&public_key.operate_with_self(v.representative()))
+                    .to_affine();
+                let r = ScalarFelt::new(point.x().representative());
+
+                r == signature.r
+            } else {
+                false
+            }
+        } else {
+            false
         }
-
-        let z = ScalarFelt::new(U256::from_bytes_be(&hash256(z)).unwrap());
-        let u = z * signature.s.inv().unwrap();
-        let v = &signature.r * signature.s.inv().unwrap();
-        let point = Secp256k1::generator()
-            .operate_with_self(u.representative())
-            .operate_with(&public_key.operate_with_self(v.representative()))
-            .to_affine();
-
-        let r = ScalarFelt::new(point.x().representative());
-
-        r == signature.r
     }
 }
 

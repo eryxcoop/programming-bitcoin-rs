@@ -6,4 +6,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-lambdaworks-math = {git="https://github.com/lambdaclass/lambdaworks.git"}
+# lambdaworks-math = {git="https://github.com/lambdaclass/lambdaworks.git"}
+lambdaworks-math = {path = "/home/schouhy/Documents/lambda/lambdaworks/math"}
+rand = "0.8.5"
+sha2 = "0.10"

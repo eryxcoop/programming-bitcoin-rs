@@ -1,9 +1,8 @@
-use crate::secp256k1::{Secp256k1, Secp256k1ScalarFelt, Secp256k1ScalarFieldModulus};
-use lambdaworks_math::{
-    cyclic_group::IsGroup, elliptic_curve::traits::IsEllipticCurve,
-    field::fields::montgomery_backed_prime_fields::IsModulus, unsigned_integer::element::U256,
+use crate::{
+    random::IsRandomScalarGenerator,
+    secp256k1::{Secp256k1, Secp256k1ScalarFelt},
 };
-use rand::Rng;
+use lambdaworks_math::{cyclic_group::IsGroup, elliptic_curve::traits::IsEllipticCurve};
 
 pub(crate) struct EllipticCurveDigitalSignatureAlgorithm;
 
@@ -35,24 +34,6 @@ impl EllipticCurveDigitalSignatureAlgorithm {
         let k_inv = k.inv().unwrap();
         let s = (z + private_key * &r) * k_inv;
         ECDSASignature::new(r, s)
-    }
-}
-
-pub(crate) trait IsRandomScalarGenerator {
-    fn random_scalar(&mut self) -> Secp256k1ScalarFelt;
-}
-
-impl IsRandomScalarGenerator for RandomScalarGenerator {
-    fn random_scalar(&mut self) -> Secp256k1ScalarFelt {
-        let mut rng = rand::thread_rng();
-
-        let mut representative = U256::from_limbs([rng.gen(), rng.gen(), rng.gen(), rng.gen()]);
-
-        while representative >= Secp256k1ScalarFieldModulus::MODULUS {
-            representative = U256::from_limbs([rng.gen(), rng.gen(), rng.gen(), rng.gen()]);
-        }
-
-        Secp256k1ScalarFelt::new(representative)
     }
 }
 

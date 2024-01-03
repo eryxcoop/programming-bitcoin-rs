@@ -37,20 +37,22 @@ impl IsModulus<U256> for ScalarFieldModulus {
     );
 }
 
-pub(crate) const SECP256K1_GENERATOR_X: BaseFelt = BaseFelt::from_hex_unchecked(
-    "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798",
-);
-pub(crate) const SECP256K1_GENERATOR_Y: BaseFelt = BaseFelt::from_hex_unchecked(
-    "483ada7726a3c4655da4fbfc0e1108a8fd17b448a68554199c47d08ffb10d4b8",
-);
+impl Secp256k1 {
+    const GENERATOR_X: BaseFelt = BaseFelt::from_hex_unchecked(
+        "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798",
+    );
+
+    const GENERATOR_Y: BaseFelt = BaseFelt::from_hex_unchecked(
+        "483ada7726a3c4655da4fbfc0e1108a8fd17b448a68554199c47d08ffb10d4b8",
+    );
+}
 
 impl IsEllipticCurve for Secp256k1 {
     type BaseField = BaseField;
     type PointRepresentation = ShortWeierstrassProjectivePoint<Self>;
 
     fn generator() -> Self::PointRepresentation {
-        ShortWeierstrassProjectivePoint::from_affine(SECP256K1_GENERATOR_X, SECP256K1_GENERATOR_Y)
-            .unwrap()
+        ShortWeierstrassProjectivePoint::from_affine(Self::GENERATOR_X, Self::GENERATOR_Y).unwrap()
     }
 }
 

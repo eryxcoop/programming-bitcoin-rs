@@ -13,29 +13,29 @@ pub(crate) fn hash256(data: &[u8]) -> Vec<u8> {
 
 #[cfg(test)]
 pub mod tests {
-    use lambdaworks_math::traits::ByteConversion;
-
-    use crate::{
-        hash::{hash256, sha256},
-        secp256k1::Secp256k1ScalarFelt,
-    };
+    use crate::hash::{hash256, sha256};
 
     #[test]
     fn test_sha256() {
-        let z = Secp256k1ScalarFelt::from_bytes_be(&sha256("".as_bytes())).unwrap();
-        let z_expected = Secp256k1ScalarFelt::from_hex(
-            "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        )
-        .unwrap();
+        let z = sha256("".as_bytes());
+
+        // z_expected = 0xe3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+        let z_expected = vec![
+            227, 176, 196, 66, 152, 252, 28, 20, 154, 251, 244, 200, 153, 111, 185, 36, 39, 174,
+            65, 228, 100, 155, 147, 76, 164, 149, 153, 27, 120, 82, 184, 85,
+        ];
         assert_eq!(z, z_expected);
     }
 
     #[test]
     fn test_hash256() {
-        let z = Secp256k1ScalarFelt::from_bytes_be(&hash256("my message".as_bytes())).unwrap();
-        let z_expected = Secp256k1ScalarFelt::from_hex_unchecked(
-            "231c6f3d980a6b0fb7152f85cee7eb52bf92433d9919b9c5218cb08e79cce78",
-        );
+        let z = hash256("my message".as_bytes());
+
+        // z_expected = 0x231c6f3d980a6b0fb7152f85cee7eb52bf92433d9919b9c5218cb08e79cce78
+        let z_expected = vec![
+            2, 49, 198, 243, 217, 128, 166, 176, 251, 113, 82, 248, 92, 238, 126, 181, 43, 249, 36,
+            51, 217, 145, 155, 156, 82, 24, 203, 8, 231, 156, 206, 120,
+        ];
         assert_eq!(z, z_expected);
     }
 }

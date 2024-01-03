@@ -96,13 +96,13 @@ impl EllipticCurveDigitalSignatureAlgorithm {
 #[cfg(test)]
 pub mod tests {
     use lambdaworks_math::{
-        cyclic_group::IsGroup, elliptic_curve::traits::IsEllipticCurve, traits::ByteConversion,
-        unsigned_integer::element::U256,
+        cyclic_group::IsGroup,
+        elliptic_curve::traits::{FromAffine, IsEllipticCurve},
     };
 
     use crate::{
         hash::hash256,
-        secp256k1::{Secp256k1, Secp256k1ScalarFelt},
+        secp256k1::{Secp256k1, Secp256k1BaseFelt, Secp256k1Point, Secp256k1ScalarFelt},
         signature::{ECDSASignature, EllipticCurveDigitalSignatureAlgorithm as ECDSA},
     };
 
@@ -137,10 +137,17 @@ pub mod tests {
     #[test]
     fn test_verify_signature() {
         let z = "my message".as_bytes();
-        let private_key = hash256("my secret".as_bytes());
-        let e =
-            Secp256k1ScalarFelt::new(U256::from_bytes_be(&private_key).unwrap()).representative();
-        let public_key = Secp256k1::generator().operate_with_self(e);
+
+        // public key corresponding to the private key = `hash256("my secret".as_bytes())`
+        let public_key = Secp256k1Point::from_affine(
+            Secp256k1BaseFelt::from_hex_unchecked(
+                "28d003eab2e428d11983f3e97c3fa0addf3b42740df0d211795ffb3be2f6c52",
+            ),
+            Secp256k1BaseFelt::from_hex_unchecked(
+                "ae987b9ec6ea159c78cb2a937ed89096fb218d9e7594f02b547526d8cd309e2",
+            ),
+        )
+        .unwrap();
 
         let signature = ECDSASignature::new(
             Secp256k1ScalarFelt::from_hex_unchecked(
@@ -150,6 +157,37 @@ pub mod tests {
                 "bb14e602ef9e3f872e25fad328466b34e6734b7a0fcd58b1eb635447ffae8cb9",
             ),
         );
+
         assert!(ECDSA::verify(z, signature, public_key));
+    }
+
+    #[test]
+    fn test_verify_invalid_signature() {
+        let z = "my message".as_bytes();
+
+        // public key corresponding to the private key = `hash256("my secret".as_bytes())`
+        let mut public_key = Secp256k1Point::from_affine(
+            Secp256k1BaseFelt::from_hex_unchecked(
+                "28d003eab2e428d11983f3e97c3fa0addf3b42740df0d211795ffb3be2f6c52",
+            ),
+            Secp256k1BaseFelt::from_hex_unchecked(
+                "ae987b9ec6ea159c78cb2a937ed89096fb218d9e7594f02b547526d8cd309e2",
+            ),
+        )
+        .unwrap();
+
+        let signature = ECDSASignature::new(
+            Secp256k1ScalarFelt::from_hex_unchecked(
+                "2b698a0f0a4041b77e63488ad48c23e8e8838dd1fb7520408b121697b782ef22",
+            ),
+            Secp256k1ScalarFelt::from_hex_unchecked(
+                "bb14e602ef9e3f872e25fad328466b34e6734b7a0fcd58b1eb635447ffae8cb9",
+            ),
+        );
+
+        // Add noise to public key to make it invalid
+        public_key = public_key.operate_with(&Secp256k1::generator());
+
+        assert!(!ECDSA::verify(z, signature, public_key));
     }
 }

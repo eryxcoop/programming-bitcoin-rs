@@ -22,6 +22,7 @@ pub(crate) type Secp256k1ScalarFelt = FieldElement<Secp256k1ScalarField>;
 
 #[derive(Debug, Clone)]
 pub(crate) struct Secp256k1;
+pub(crate) type Secp256k1Point = ShortWeierstrassProjectivePoint<Secp256k1>;
 
 /// p = 2**256 - 2**32 - 977
 impl IsModulus<U256> for Secp256k1BaseFieldModulus {

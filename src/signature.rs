@@ -7,7 +7,16 @@ use rand::Rng;
 pub(crate) struct ECDSA;
 
 #[derive(Debug, PartialEq, Eq)]
-pub(crate) struct ECDSASignature(Secp256k1ScalarFelt, Secp256k1ScalarFelt);
+pub(crate) struct ECDSASignature {
+    r: Secp256k1ScalarFelt,
+    s: Secp256k1ScalarFelt,
+}
+
+impl ECDSASignature {
+    fn new(r: Secp256k1ScalarFelt, s: Secp256k1ScalarFelt) -> Self {
+        Self { r, s }
+    }
+}
 
 pub(crate) trait IsEllipticCurveDigitalSignatureAlgorithm {
     fn random_scalar() -> Secp256k1ScalarFelt {
@@ -28,7 +37,7 @@ pub(crate) trait IsEllipticCurveDigitalSignatureAlgorithm {
         let r = Secp256k1ScalarFelt::new(R.x().representative());
         let k_inv = k.inv().unwrap();
         let s = (z + private_key * &r) * k_inv;
-        ECDSASignature(r, s)
+        ECDSASignature::new(r, s)
     }
 }
 
@@ -59,7 +68,7 @@ pub mod tests {
         );
 
         let signature = TestECDSA::sign(z, private_key);
-        let signature_expected = ECDSASignature(
+        let signature_expected = ECDSASignature::new(
             Secp256k1ScalarFelt::from_hex_unchecked(
                 "2b698a0f0a4041b77e63488ad48c23e8e8838dd1fb7520408b121697b782ef22",
             ),

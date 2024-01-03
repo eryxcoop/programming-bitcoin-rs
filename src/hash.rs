@@ -3,8 +3,7 @@ use sha2::{Digest, Sha256};
 pub(crate) fn sha256(data: &[u8]) -> [u8; 32] {
     let mut hasher = Sha256::new();
     hasher.update(data);
-    let e: [u8; 32] = hasher.finalize().into();
-    e.into()
+    hasher.finalize().into()
 }
 
 pub(crate) fn hash256(data: &[u8]) -> [u8; 32] {

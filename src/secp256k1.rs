@@ -11,41 +11,41 @@ use lambdaworks_math::{
 };
 
 #[derive(Debug, Clone)]
-pub(crate) struct Secp256k1BaseFieldModulus;
-pub(crate) type Secp256k1BaseField = MontgomeryBackendPrimeField<Secp256k1BaseFieldModulus, 4>;
-pub(crate) type Secp256k1BaseFelt = FieldElement<Secp256k1BaseField>;
+pub(crate) struct BaseFieldModulus;
+pub(crate) type BaseField = MontgomeryBackendPrimeField<BaseFieldModulus, 4>;
+pub(crate) type BaseFelt = FieldElement<BaseField>;
 
 #[derive(Debug, Clone)]
-pub(crate) struct Secp256k1ScalarFieldModulus;
-pub(crate) type Secp256k1ScalarField = MontgomeryBackendPrimeField<Secp256k1ScalarFieldModulus, 4>;
-pub(crate) type Secp256k1ScalarFelt = FieldElement<Secp256k1ScalarField>;
+pub(crate) struct ScalarFieldModulus;
+pub(crate) type ScalarField = MontgomeryBackendPrimeField<ScalarFieldModulus, 4>;
+pub(crate) type ScalarFelt = FieldElement<ScalarField>;
 
 #[derive(Debug, Clone)]
 pub(crate) struct Secp256k1;
-pub(crate) type Secp256k1Point = ShortWeierstrassProjectivePoint<Secp256k1>;
+pub(crate) type Point = ShortWeierstrassProjectivePoint<Secp256k1>;
 
 /// p = 2**256 - 2**32 - 977
-impl IsModulus<U256> for Secp256k1BaseFieldModulus {
+impl IsModulus<U256> for BaseFieldModulus {
     const MODULUS: U256 = U256::from_hex_unchecked(
         "fffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc2f",
     );
 }
 
-impl IsModulus<U256> for Secp256k1ScalarFieldModulus {
+impl IsModulus<U256> for ScalarFieldModulus {
     const MODULUS: U256 = U256::from_hex_unchecked(
         "fffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141",
     );
 }
 
-pub(crate) const SECP256K1_GENERATOR_X: Secp256k1BaseFelt = Secp256k1BaseFelt::from_hex_unchecked(
+pub(crate) const SECP256K1_GENERATOR_X: BaseFelt = BaseFelt::from_hex_unchecked(
     "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798",
 );
-pub(crate) const SECP256K1_GENERATOR_Y: Secp256k1BaseFelt = Secp256k1BaseFelt::from_hex_unchecked(
+pub(crate) const SECP256K1_GENERATOR_Y: BaseFelt = BaseFelt::from_hex_unchecked(
     "483ada7726a3c4655da4fbfc0e1108a8fd17b448a68554199c47d08ffb10d4b8",
 );
 
 impl IsEllipticCurve for Secp256k1 {
-    type BaseField = Secp256k1BaseField;
+    type BaseField = BaseField;
     type PointRepresentation = ShortWeierstrassProjectivePoint<Self>;
 
     fn generator() -> Self::PointRepresentation {
@@ -55,12 +55,12 @@ impl IsEllipticCurve for Secp256k1 {
 }
 
 impl IsShortWeierstrass for Secp256k1 {
-    fn a() -> FieldElement<Secp256k1BaseField> {
-        Secp256k1BaseFelt::zero()
+    fn a() -> FieldElement<BaseField> {
+        BaseFelt::zero()
     }
 
-    fn b() -> FieldElement<Secp256k1BaseField> {
-        Secp256k1BaseFelt::from(7)
+    fn b() -> FieldElement<BaseField> {
+        BaseFelt::from(7)
     }
 }
 
@@ -71,11 +71,11 @@ pub mod tests {
         field::fields::montgomery_backed_prime_fields::IsModulus, unsigned_integer::element::U256,
     };
 
-    use crate::secp256k1::{Secp256k1, Secp256k1ScalarFieldModulus};
+    use crate::secp256k1::{ScalarFieldModulus, Secp256k1};
 
     #[test]
     fn test_generator_order() {
-        let expected_order = Secp256k1ScalarFieldModulus::MODULUS;
+        let expected_order = ScalarFieldModulus::MODULUS;
         assert!(!Secp256k1::generator()
             .operate_with_self(expected_order - U256::from_u64(1))
             .is_neutral_element());

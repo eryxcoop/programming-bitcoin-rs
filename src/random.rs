@@ -3,26 +3,26 @@ use lambdaworks_math::{
 };
 
 use crate::{
-    secp256k1::{Secp256k1ScalarFelt, Secp256k1ScalarFieldModulus},
+    secp256k1::{self, ScalarFelt, ScalarFieldModulus},
     signature::RandomScalarGenerator,
 };
 
 use rand::Rng;
 
 pub(crate) trait IsRandomScalarGenerator {
-    fn random_scalar(&mut self) -> Secp256k1ScalarFelt;
+    fn random_scalar(&mut self) -> ScalarFelt;
 }
 
 impl IsRandomScalarGenerator for RandomScalarGenerator {
-    fn random_scalar(&mut self) -> Secp256k1ScalarFelt {
+    fn random_scalar(&mut self) -> ScalarFelt {
         let mut rng = rand::thread_rng();
 
         let mut representative = U256::from_limbs([rng.gen(), rng.gen(), rng.gen(), rng.gen()]);
 
-        while representative >= Secp256k1ScalarFieldModulus::MODULUS {
+        while representative >= ScalarFieldModulus::MODULUS {
             representative = U256::from_limbs([rng.gen(), rng.gen(), rng.gen(), rng.gen()]);
         }
 
-        Secp256k1ScalarFelt::new(representative)
+        ScalarFelt::new(representative)
     }
 }

@@ -1,7 +1,7 @@
 use crate::{
     hash::hash256,
     random::IsRandomScalarGenerator,
-    secp256k1::{Secp256k1, Secp256k1BaseFelt, Secp256k1ScalarFelt, Secp256k1ScalarFieldModulus},
+    secp256k1::{BaseFelt, ScalarFelt, ScalarFieldModulus, Secp256k1},
 };
 use lambdaworks_math::{
     cyclic_group::IsGroup,
@@ -18,8 +18,8 @@ pub(crate) struct EllipticCurveDigitalSignatureAlgorithm;
 
 #[derive(Debug, PartialEq, Eq)]
 pub(crate) struct ECDSASignature {
-    r: Secp256k1ScalarFelt,
-    s: Secp256k1ScalarFelt,
+    r: ScalarFelt,
+    s: ScalarFelt,
 }
 pub(crate) type PrivateKey = [u8; 32];
 pub(crate) type PublicKey = ShortWeierstrassProjectivePoint<Secp256k1>;
@@ -27,7 +27,7 @@ pub(crate) type PublicKey = ShortWeierstrassProjectivePoint<Secp256k1>;
 pub(crate) struct RandomScalarGenerator;
 
 impl ECDSASignature {
-    fn new(r: Secp256k1ScalarFelt, s: Secp256k1ScalarFelt) -> Self {
+    fn new(r: ScalarFelt, s: ScalarFelt) -> Self {
         Self { r, s }
     }
 }
@@ -38,48 +38,48 @@ impl EllipticCurveDigitalSignatureAlgorithm {
         private_key: PrivateKey,
         random: &mut impl IsRandomScalarGenerator,
     ) -> ECDSASignature {
-        let z = Secp256k1ScalarFelt::new(U256::from_bytes_be(&hash256(z)).unwrap());
-        let e = Secp256k1ScalarFelt::new(U256::from_bytes_be(&private_key).unwrap());
+        let z = ScalarFelt::new(U256::from_bytes_be(&hash256(z)).unwrap());
+        let e = ScalarFelt::new(U256::from_bytes_be(&private_key).unwrap());
 
         loop {
             let k = random.random_scalar();
             if let Ok(k_inv) = k.inv() {
-                let R = Secp256k1::generator()
+                let point = Secp256k1::generator()
                     .operate_with_self(k.representative())
                     .to_affine();
-                let r = Secp256k1ScalarFelt::new(R.x().representative());
-                if r != Secp256k1ScalarFelt::zero() {
-                    let s = (z + e * &r) * k_inv;
-                    return ECDSASignature::new(r, s);
+                let r = ScalarFelt::new(point.x().representative());
+                if r != ScalarFelt::zero() {
+                    let s = (&z + &e * &r) * k_inv;
+                    if s != ScalarFelt::zero() {
+                        return ECDSASignature::new(r, s);
+                    }
                 }
             }
         }
     }
 
     fn verify(z: &[u8], signature: ECDSASignature, public_key: PublicKey) -> bool {
-        if public_key.z() == &Secp256k1BaseFelt::zero() {
+        if public_key.z() == &BaseFelt::zero() {
             return false;
         }
 
         let public_key = public_key.to_affine();
-        if Secp256k1::defining_equation(public_key.x(), public_key.y()) != Secp256k1BaseFelt::zero()
-        {
+        if Secp256k1::defining_equation(public_key.x(), public_key.y()) != BaseFelt::zero() {
             return false;
         }
 
         if !public_key
-            .operate_with_self(Secp256k1ScalarFieldModulus::MODULUS)
+            .operate_with_self(ScalarFieldModulus::MODULUS)
             .is_neutral_element()
         {
             return false;
         }
 
-        if signature.r == Secp256k1ScalarFelt::zero() || signature.s == Secp256k1ScalarFelt::zero()
-        {
+        if signature.r == ScalarFelt::zero() || signature.s == ScalarFelt::zero() {
             return false;
         }
 
-        let z = Secp256k1ScalarFelt::new(U256::from_bytes_be(&hash256(z)).unwrap());
+        let z = ScalarFelt::new(U256::from_bytes_be(&hash256(z)).unwrap());
         let u = z * signature.s.inv().unwrap();
         let v = &signature.r * signature.s.inv().unwrap();
         let point = Secp256k1::generator()
@@ -87,7 +87,7 @@ impl EllipticCurveDigitalSignatureAlgorithm {
             .operate_with(&public_key.operate_with_self(v.representative()))
             .to_affine();
 
-        let r = Secp256k1ScalarFelt::new(point.x().representative());
+        let r = ScalarFelt::new(point.x().representative());
 
         r == signature.r
     }
@@ -102,7 +102,7 @@ pub mod tests {
 
     use crate::{
         hash::hash256,
-        secp256k1::{Secp256k1, Secp256k1BaseFelt, Secp256k1Point, Secp256k1ScalarFelt},
+        secp256k1::{BaseFelt, Point, ScalarFelt, Secp256k1},
         signature::{ECDSASignature, EllipticCurveDigitalSignatureAlgorithm as ECDSA},
     };
 
@@ -110,8 +110,8 @@ pub mod tests {
 
     struct TestRandomScalarGenerator;
     impl IsRandomScalarGenerator for TestRandomScalarGenerator {
-        fn random_scalar(&mut self) -> Secp256k1ScalarFelt {
-            Secp256k1ScalarFelt::from(1234567890)
+        fn random_scalar(&mut self) -> ScalarFelt {
+            ScalarFelt::from(1234567890)
         }
     }
 
@@ -123,10 +123,10 @@ pub mod tests {
         let signature = ECDSA::sign(z, private_key, &mut TestRandomScalarGenerator);
 
         let signature_expected = ECDSASignature::new(
-            Secp256k1ScalarFelt::from_hex_unchecked(
+            ScalarFelt::from_hex_unchecked(
                 "2b698a0f0a4041b77e63488ad48c23e8e8838dd1fb7520408b121697b782ef22",
             ),
-            Secp256k1ScalarFelt::from_hex_unchecked(
+            ScalarFelt::from_hex_unchecked(
                 "bb14e602ef9e3f872e25fad328466b34e6734b7a0fcd58b1eb635447ffae8cb9",
             ),
         );
@@ -139,21 +139,21 @@ pub mod tests {
         let z = "my message".as_bytes();
 
         // public key corresponding to the private key = `hash256("my secret".as_bytes())`
-        let public_key = Secp256k1Point::from_affine(
-            Secp256k1BaseFelt::from_hex_unchecked(
+        let public_key = Point::from_affine(
+            BaseFelt::from_hex_unchecked(
                 "28d003eab2e428d11983f3e97c3fa0addf3b42740df0d211795ffb3be2f6c52",
             ),
-            Secp256k1BaseFelt::from_hex_unchecked(
+            BaseFelt::from_hex_unchecked(
                 "ae987b9ec6ea159c78cb2a937ed89096fb218d9e7594f02b547526d8cd309e2",
             ),
         )
         .unwrap();
 
         let signature = ECDSASignature::new(
-            Secp256k1ScalarFelt::from_hex_unchecked(
+            ScalarFelt::from_hex_unchecked(
                 "2b698a0f0a4041b77e63488ad48c23e8e8838dd1fb7520408b121697b782ef22",
             ),
-            Secp256k1ScalarFelt::from_hex_unchecked(
+            ScalarFelt::from_hex_unchecked(
                 "bb14e602ef9e3f872e25fad328466b34e6734b7a0fcd58b1eb635447ffae8cb9",
             ),
         );
@@ -166,21 +166,21 @@ pub mod tests {
         let z = "my message".as_bytes();
 
         // public key corresponding to the private key = `hash256("my secret".as_bytes())`
-        let mut public_key = Secp256k1Point::from_affine(
-            Secp256k1BaseFelt::from_hex_unchecked(
+        let mut public_key = Point::from_affine(
+            BaseFelt::from_hex_unchecked(
                 "28d003eab2e428d11983f3e97c3fa0addf3b42740df0d211795ffb3be2f6c52",
             ),
-            Secp256k1BaseFelt::from_hex_unchecked(
+            BaseFelt::from_hex_unchecked(
                 "ae987b9ec6ea159c78cb2a937ed89096fb218d9e7594f02b547526d8cd309e2",
             ),
         )
         .unwrap();
 
         let signature = ECDSASignature::new(
-            Secp256k1ScalarFelt::from_hex_unchecked(
+            ScalarFelt::from_hex_unchecked(
                 "2b698a0f0a4041b77e63488ad48c23e8e8838dd1fb7520408b121697b782ef22",
             ),
-            Secp256k1ScalarFelt::from_hex_unchecked(
+            ScalarFelt::from_hex_unchecked(
                 "bb14e602ef9e3f872e25fad328466b34e6734b7a0fcd58b1eb635447ffae8cb9",
             ),
         );

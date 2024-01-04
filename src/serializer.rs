@@ -17,7 +17,7 @@ impl Serializer {
         result
     }
 
-    pub fn serialize_point_uncompressed_sec(point: &Point) -> [u8; 1 + 32 + 32] {
+    pub fn serialize_point_uncompressed_sec(point: &Point) -> [u8; 65] {
         let point = point.to_affine();
         let [x, y, _] = point.coordinates();
         let serialized_x = Self::serialize_base_felt_be(x);
@@ -30,7 +30,7 @@ impl Serializer {
         result
     }
 
-    pub fn serialize_point_compressed_sec(point: &Point) -> [u8; 1 + 32] {
+    pub fn serialize_point_compressed_sec(point: &Point) -> [u8; 33] {
         let point = point.to_affine();
         let [x, y, _] = point.coordinates();
         let serialized_x = Self::serialize_base_felt_be(x);

@@ -10,9 +10,9 @@ impl Serializer {
         let mut result = [0u8; 32];
         for (i, limb) in representative_limbs.iter().enumerate() {
             let bytes = limb.to_be_bytes();
-            bytes.iter().enumerate().for_each(|(j, byte)| {
+            for (j, byte) in bytes.iter().enumerate() {
                 result[8 * i + j] = *byte;
-            })
+            }
         }
         result
     }
@@ -20,18 +20,13 @@ impl Serializer {
     pub fn serialize_point_uncompressed_sec(point: &Point) -> [u8; 1 + 32 + 32] {
         let point = point.to_affine();
         let [x, y, _] = point.coordinates();
+        let serialized_x = Self::serialize_base_felt_be(x);
+        let serialized_y = Self::serialize_base_felt_be(y);
+
         let mut result = [0u8; 1 + 32 + 32];
         result[0] = 0x04;
-        let serialized_x = Self::serialize_base_felt_be(x);
-
-        for i in 0..32 {
-            result[i + 1] = serialized_x[i];
-        }
-
-        let serialized_y = Self::serialize_base_felt_be(y);
-        for i in 0..32 {
-            result[i + 1 + 32] = serialized_y[i];
-        }
+        result[1..(32 + 1)].copy_from_slice(&serialized_x);
+        result[(32 + 1)..].copy_from_slice(&serialized_y);
         result
     }
 }

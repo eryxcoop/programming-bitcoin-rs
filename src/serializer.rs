@@ -34,14 +34,14 @@ impl Serializer {
         let point = point.to_affine();
         let [x, y, _] = point.coordinates();
         let serialized_x = Self::serialize_base_felt_be(x);
-        let serialized_y = Self::serialize_base_felt_be(y);
+
         let mut result = [0u8; 1 + 32];
-        result[1..(1 + 32)].copy_from_slice(&serialized_x);
-        if serialized_y[31] & 1 == 0 {
+        if y.representative().limbs[3] & 1 == 0 {
             result[0] = 2
         } else {
             result[0] = 3
         }
+        result[1..(1 + 32)].copy_from_slice(&serialized_x);
         result
     }
 }

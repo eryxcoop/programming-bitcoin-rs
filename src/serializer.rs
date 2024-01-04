@@ -1,20 +1,52 @@
 use std::marker::PhantomData;
 
-use crate::secp256k1::{curve::Point, fields::BaseFelt};
+use lambdaworks_math::unsigned_integer::element::U256;
+
+use crate::{
+    secp256k1::{
+        curve::Point,
+        fields::{BaseFelt, ScalarFelt},
+    },
+    signature::ECDSASignature,
+};
 
 pub(crate) struct Serializer;
 
 impl Serializer {
-    pub fn serialize_base_felt_be(element: &BaseFelt) -> [u8; 32] {
-        let representative_limbs = element.representative().limbs;
+    pub fn serialize_u256_element_be(element: &U256) -> [u8; 32] {
         let mut result = [0u8; 32];
-        for (i, limb) in representative_limbs.iter().enumerate() {
+        for (i, limb) in element.limbs.iter().enumerate() {
             let bytes = limb.to_be_bytes();
             for (j, byte) in bytes.iter().enumerate() {
                 result[8 * i + j] = *byte;
             }
         }
         result
+    }
+    pub fn serialize_u256_element_der_format(element: &U256) -> Vec<u8> {
+        let mut serialized: Vec<u8> = Self::serialize_u256_element_be(element)
+            .into_iter()
+            .skip_while(|&byte| byte == 0)
+            .collect();
+
+        if serialized.first().map_or(false, |&byte| byte > 0x80) {
+            serialized.insert(0, 0x00);
+        }
+
+        let len = serialized.len();
+        let mut result = Vec::with_capacity(len + 1);
+        result.push(len as u8);
+        result.extend(serialized);
+
+        result
+    }
+
+    pub fn serialize_base_felt_be(element: &BaseFelt) -> [u8; 32] {
+        Self::serialize_u256_element_be(&element.representative())
+    }
+
+    pub fn serialize_scalar_felt_be(element: &ScalarFelt) -> [u8; 32] {
+        Self::serialize_u256_element_be(&element.representative())
     }
 
     pub fn serialize_point_uncompressed_sec(point: &Point) -> [u8; 65] {
@@ -44,15 +76,32 @@ impl Serializer {
         result[1..(1 + 32)].copy_from_slice(&serialized_x);
         result
     }
+
+    pub fn serialize_ecdsa_signature(signature: &ECDSASignature) -> Vec<u8> {
+        let serialized_r = Self::serialize_u256_element_der_format(&signature.r.representative());
+        let serialized_s = Self::serialize_u256_element_der_format(&signature.s.representative());
+        let signature_length = 2 + serialized_r.len() + serialized_s.len();
+        let mut result = Vec::with_capacity(signature_length);
+        result.push(0x30);
+        result.push(signature_length as u8);
+        result.push(2);
+        result.extend_from_slice(&serialized_r);
+        result.push(2);
+        result.extend_from_slice(&serialized_s);
+        result
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use lambdaworks_math::elliptic_curve::traits::{FromAffine, IsEllipticCurve};
 
-    use crate::secp256k1::{
-        curve::{Point, Secp256k1},
-        fields::BaseFelt,
+    use crate::{
+        secp256k1::{
+            curve::{Point, Secp256k1},
+            fields::{BaseFelt, ScalarFelt},
+        },
+        signature::ECDSASignature,
     };
 
     use super::Serializer;
@@ -130,5 +179,24 @@ mod tests {
         ];
         let serialized_point = Serializer::serialize_point_compressed_sec(&point);
         assert_eq!(serialized_point, expected_bytes);
+    }
+
+    #[test]
+    fn test_serialize_ecdsa_signature() {
+        let r = ScalarFelt::from_hex_unchecked(
+            "37206a0610995c58074999cb9767b87af4c4978db68c06e8e6e81d282047a7c6",
+        );
+        let s = ScalarFelt::from_hex_unchecked(
+            "8ca63759c1157ebeaec0d03cecca119fc9a75bf8e6d0fa65c841c8e2738cdaec",
+        );
+        let signature = ECDSASignature::new(r, s);
+        let expected_bytes = vec![
+            48, 69, 2, 32, 55, 32, 106, 6, 16, 153, 92, 88, 7, 73, 153, 203, 151, 103, 184, 122,
+            244, 196, 151, 141, 182, 140, 6, 232, 230, 232, 29, 40, 32, 71, 167, 198, 2, 33, 0,
+            140, 166, 55, 89, 193, 21, 126, 190, 174, 192, 208, 60, 236, 202, 17, 159, 201, 167,
+            91, 248, 230, 208, 250, 101, 200, 65, 200, 226, 115, 140, 218, 236,
+        ];
+        let serialized_signature = Serializer::serialize_ecdsa_signature(&signature);
+        assert_eq!(serialized_signature, expected_bytes);
     }
 }

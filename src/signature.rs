@@ -24,6 +24,7 @@ pub(crate) struct ECDSASignature {
     r: ScalarFelt,
     s: ScalarFelt,
 }
+
 pub(crate) type PrivateKey = [u8; 32];
 pub(crate) type PublicKey = ShortWeierstrassProjectivePoint<Secp256k1>;
 

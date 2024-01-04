@@ -16,11 +16,31 @@ impl Serializer {
         }
         result
     }
+
+    pub fn serialize_point_uncompressed_sec(point: &Point) -> [u8; 1 + 32 + 32] {
+        let point = point.to_affine();
+        let [x, y, _] = point.coordinates();
+        let mut result = [0u8; 1 + 32 + 32];
+        result[0] = 0x04;
+        let serialized_x = Self::serialize_base_felt_be(x);
+
+        for i in 0..32 {
+            result[i + 1] = serialized_x[i];
+        }
+
+        let serialized_y = Self::serialize_base_felt_be(y);
+        for i in 0..32 {
+            result[i + 33] = serialized_y[i];
+        }
+        result
+    }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::secp256k1::fields::BaseFelt;
+    use lambdaworks_math::elliptic_curve::traits::IsEllipticCurve;
+
+    use crate::secp256k1::{curve::Secp256k1, fields::BaseFelt};
 
     use super::Serializer;
 
@@ -35,5 +55,18 @@ mod tests {
         ];
         let serialized_base_felt = Serializer::serialize_base_felt_be(&base_felt);
         assert_eq!(serialized_base_felt, expected_bytes);
+    }
+
+    #[test]
+    fn test_serialize_point_uncompressed_sec() {
+        let point = Secp256k1::generator();
+        let expected_bytes = [
+            4, 121, 190, 102, 126, 249, 220, 187, 172, 85, 160, 98, 149, 206, 135, 11, 7, 2, 155,
+            252, 219, 45, 206, 40, 217, 89, 242, 129, 91, 22, 248, 23, 152, 72, 58, 218, 119, 38,
+            163, 196, 101, 93, 164, 251, 252, 14, 17, 8, 168, 253, 23, 180, 72, 166, 133, 84, 25,
+            156, 71, 208, 143, 251, 16, 212, 184,
+        ];
+        let serialized_point = Serializer::serialize_point_uncompressed_sec(&point);
+        assert_eq!(serialized_point, expected_bytes);
     }
 }

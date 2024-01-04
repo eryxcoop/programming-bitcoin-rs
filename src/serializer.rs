@@ -30,7 +30,7 @@ impl Serializer {
 
         let serialized_y = Self::serialize_base_felt_be(y);
         for i in 0..32 {
-            result[i + 33] = serialized_y[i];
+            result[i + 1 + 32] = serialized_y[i];
         }
         result
     }

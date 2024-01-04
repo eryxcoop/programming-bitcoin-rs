@@ -94,7 +94,10 @@ impl Serializer {
 
 #[cfg(test)]
 mod tests {
-    use lambdaworks_math::elliptic_curve::traits::{FromAffine, IsEllipticCurve};
+    use lambdaworks_math::{
+        elliptic_curve::traits::{FromAffine, IsEllipticCurve},
+        unsigned_integer::element::U256,
+    };
 
     use crate::{
         secp256k1::{
@@ -198,5 +201,16 @@ mod tests {
         ];
         let serialized_signature = Serializer::serialize_ecdsa_signature(&signature);
         assert_eq!(serialized_signature, expected_bytes);
+    }
+
+    #[test]
+    fn test_serialize_u256_element_der_format() {
+        let element = U256::from_hex_unchecked("05c63fdc786d6a6b904080b58f72edb08da1cf2d309539336a");
+        let expected_bytes = [
+            25, 5, 198, 63, 220, 120, 109, 106, 107, 144, 64, 128, 181, 143, 114, 237, 176, 141,
+            161, 207, 45, 48, 149, 57, 51, 106,
+        ];
+        let serialized_element = Serializer::serialize_u256_element_der_format(&element);
+        assert_eq!(serialized_element, expected_bytes);
     }
 }

@@ -29,13 +29,31 @@ impl Serializer {
         result[(32 + 1)..].copy_from_slice(&serialized_y);
         result
     }
+
+    pub fn serialize_point_compressed_sec(point: &Point) -> [u8; 1 + 32] {
+        let point = point.to_affine();
+        let [x, y, _] = point.coordinates();
+        let serialized_x = Self::serialize_base_felt_be(x);
+        let serialized_y = Self::serialize_base_felt_be(y);
+        let mut result = [0u8; 1 + 32];
+        result[1..(1 + 32)].copy_from_slice(&serialized_x);
+        if serialized_y[31] & 1 == 0 {
+            result[0] = 0x2
+        } else {
+            result[0] = 0x3
+        }
+        result
+    }
 }
 
 #[cfg(test)]
 mod tests {
-    use lambdaworks_math::elliptic_curve::traits::IsEllipticCurve;
+    use lambdaworks_math::elliptic_curve::traits::{FromAffine, IsEllipticCurve};
 
-    use crate::secp256k1::{curve::Secp256k1, fields::BaseFelt};
+    use crate::secp256k1::{
+        curve::{Point, Secp256k1},
+        fields::BaseFelt,
+    };
 
     use super::Serializer;
 
@@ -62,6 +80,55 @@ mod tests {
             156, 71, 208, 143, 251, 16, 212, 184,
         ];
         let serialized_point = Serializer::serialize_point_uncompressed_sec(&point);
+        assert_eq!(serialized_point, expected_bytes);
+    }
+
+    #[test]
+    fn test_serialize_point_compressed_sec_generator() {
+        let point = Secp256k1::generator();
+        let expected_bytes = [
+            2, 121, 190, 102, 126, 249, 220, 187, 172, 85, 160, 98, 149, 206, 135, 11, 7, 2, 155,
+            252, 219, 45, 206, 40, 217, 89, 242, 129, 91, 22, 248, 23, 152,
+        ];
+        let serialized_point = Serializer::serialize_point_compressed_sec(&point);
+        assert_eq!(serialized_point, expected_bytes);
+    }
+
+    #[test]
+    fn test_serialize_point_compressed_sec_odd() {
+        let point = Point::from_affine(
+            BaseFelt::from_hex_unchecked(
+                "49fc4e631e3624a545de3f89f5d8684c7b8138bd94bdd531d2e213bf016b278a",
+            ),
+            BaseFelt::from_hex_unchecked(
+                "a56c896489c71dfc65701ce25050f542f336893fb8cd15f4e8e5c124dbf58e47",
+            ),
+        )
+        .unwrap();
+        let expected_bytes = [
+            3, 73, 252, 78, 99, 30, 54, 36, 165, 69, 222, 63, 137, 245, 216, 104, 76, 123, 129, 56,
+            189, 148, 189, 213, 49, 210, 226, 19, 191, 1, 107, 39, 138,
+        ];
+        let serialized_point = Serializer::serialize_point_compressed_sec(&point);
+        assert_eq!(serialized_point, expected_bytes);
+    }
+
+    #[test]
+    fn test_serialize_point_compressed_sec_even() {
+        let point = Point::from_affine(
+            BaseFelt::from_hex_unchecked(
+                "49fc4e631e3624a545de3f89f5d8684c7b8138bd94bdd531d2e213bf016b278a",
+            ),
+            BaseFelt::from_hex_unchecked(
+                "5a93769b7638e2039a8fe31dafaf0abd0cc976c04732ea0b171a3eda240a6de8",
+            ),
+        )
+        .unwrap();
+        let expected_bytes = [
+            2, 73, 252, 78, 99, 30, 54, 36, 165, 69, 222, 63, 137, 245, 216, 104, 76, 123, 129, 56,
+            189, 148, 189, 213, 49, 210, 226, 19, 191, 1, 107, 39, 138,
+        ];
+        let serialized_point = Serializer::serialize_point_compressed_sec(&point);
         assert_eq!(serialized_point, expected_bytes);
     }
 }

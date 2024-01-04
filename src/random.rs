@@ -3,7 +3,7 @@ use lambdaworks_math::{
 };
 
 use crate::{
-    secp256k1::{self, ScalarFelt, ScalarFieldModulus},
+    secp256k1::fields::{ScalarFelt, ScalarFieldModulus},
     signature::RandomScalarGenerator,
 };
 

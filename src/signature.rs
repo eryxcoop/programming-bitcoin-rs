@@ -1,7 +1,10 @@
 use crate::{
     hash::hash256,
     random::IsRandomScalarGenerator,
-    secp256k1::{BaseFelt, ScalarFelt, ScalarFieldModulus, Secp256k1},
+    secp256k1::{
+        curve::Secp256k1,
+        fields::{BaseFelt, ScalarFelt, ScalarFieldModulus},
+    },
 };
 use lambdaworks_math::{
     cyclic_group::IsGroup,
@@ -105,7 +108,10 @@ pub mod tests {
 
     use crate::{
         hash::hash256,
-        secp256k1::{BaseFelt, Point, ScalarFelt, Secp256k1},
+        secp256k1::{
+            curve::{Point, Secp256k1},
+            fields::{BaseFelt, ScalarFelt},
+        },
         signature::{ECDSASignature, EllipticCurveDigitalSignatureAlgorithm as ECDSA},
     };
 

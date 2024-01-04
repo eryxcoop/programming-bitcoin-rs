@@ -24,7 +24,7 @@ impl Serializer {
         let serialized_y = Self::serialize_base_felt_be(y);
 
         let mut result = [0u8; 1 + 32 + 32];
-        result[0] = 0x04;
+        result[0] = 4;
         result[1..(32 + 1)].copy_from_slice(&serialized_x);
         result[(32 + 1)..].copy_from_slice(&serialized_y);
         result
@@ -38,9 +38,9 @@ impl Serializer {
         let mut result = [0u8; 1 + 32];
         result[1..(1 + 32)].copy_from_slice(&serialized_x);
         if serialized_y[31] & 1 == 0 {
-            result[0] = 0x2
+            result[0] = 2
         } else {
-            result[0] = 0x3
+            result[0] = 3
         }
         result
     }

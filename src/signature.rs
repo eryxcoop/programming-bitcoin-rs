@@ -126,7 +126,7 @@ pub mod tests {
     }
 
     #[test]
-    fn test_signature() {
+    fn test_signature_1() {
         let private_key = hash256("my secret".as_bytes());
         let z = hash256("my message".as_bytes());
 
@@ -138,6 +138,28 @@ pub mod tests {
             ),
             ScalarFelt::from_hex_unchecked(
                 "bb14e602ef9e3f872e25fad328466b34e6734b7a0fcd58b1eb635447ffae8cb9",
+            ),
+        );
+
+        assert_eq!(signature, signature_expected);
+    }
+
+    #[test]
+    fn test_signature_2() {
+        let private_key = [
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 48, 57,
+        ];
+        let z = hash256("Programming Bitcoin!".as_bytes());
+
+        let signature = ECDSA::sign(&z, private_key, &mut TestRandomScalarGenerator);
+
+        let signature_expected = ECDSASignature::new(
+            ScalarFelt::from_hex_unchecked(
+                "2b698a0f0a4041b77e63488ad48c23e8e8838dd1fb7520408b121697b782ef22",
+            ),
+            ScalarFelt::from_hex_unchecked(
+                "1dbc63bfef4416705e602a7b564161167076d8b20990a0f26f316cff2cb0bc1a",
             ),
         );
 

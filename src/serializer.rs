@@ -1,5 +1,3 @@
-
-
 use lambdaworks_math::unsigned_integer::element::U256;
 
 use crate::{

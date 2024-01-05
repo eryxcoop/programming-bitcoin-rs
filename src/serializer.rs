@@ -1,4 +1,4 @@
-use std::marker::PhantomData;
+
 
 use lambdaworks_math::unsigned_integer::element::U256;
 
@@ -105,7 +105,7 @@ mod tests {
             curve::{Point, Secp256k1},
             fields::{BaseFelt, ScalarFelt},
         },
-        signature::{self, ECDSASignature, EllipticCurveDigitalSignatureAlgorithm as ECDSA},
+        signature::ECDSASignature,
     };
 
     use super::Serializer;

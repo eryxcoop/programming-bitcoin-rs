@@ -38,11 +38,11 @@ impl ECDSASignature {
 
 impl EllipticCurveDigitalSignatureAlgorithm {
     fn sign(
-        z: &[u8],
+        z: &[u8; 32],
         private_key: PrivateKey,
         random: &mut impl IsRandomScalarGenerator,
     ) -> ECDSASignature {
-        let z = ScalarFelt::new(U256::from_bytes_be(&hash256(z)).unwrap());
+        let z = ScalarFelt::new(U256::from_bytes_be(z).unwrap());
         let e = ScalarFelt::new(U256::from_bytes_be(&private_key).unwrap());
 
         loop {
@@ -62,7 +62,7 @@ impl EllipticCurveDigitalSignatureAlgorithm {
         }
     }
 
-    fn verify(z: &[u8], signature: ECDSASignature, public_key: PublicKey) -> bool {
+    fn verify(z: &[u8; 32], signature: ECDSASignature, public_key: PublicKey) -> bool {
         if public_key.z() == &BaseFelt::zero() {
             return false;
         }
@@ -81,7 +81,7 @@ impl EllipticCurveDigitalSignatureAlgorithm {
 
         if signature.r != ScalarFelt::zero() {
             if let Ok(s_inv) = signature.s.inv() {
-                let z = ScalarFelt::new(U256::from_bytes_be(&hash256(z)).unwrap());
+                let z = ScalarFelt::new(U256::from_bytes_be(z).unwrap());
                 let u = z * &s_inv;
                 let v = &signature.r * s_inv;
                 let point = Secp256k1::generator()
@@ -128,9 +128,9 @@ pub mod tests {
     #[test]
     fn test_signature() {
         let private_key = hash256("my secret".as_bytes());
-        let z = "my message".as_bytes();
+        let z = hash256("my message".as_bytes());
 
-        let signature = ECDSA::sign(z, private_key, &mut TestRandomScalarGenerator);
+        let signature = ECDSA::sign(&z, private_key, &mut TestRandomScalarGenerator);
 
         let signature_expected = ECDSASignature::new(
             ScalarFelt::from_hex_unchecked(
@@ -145,8 +145,8 @@ pub mod tests {
     }
 
     #[test]
-    fn test_verify_signature() {
-        let z = "my message".as_bytes();
+    fn test_verify_signature_1() {
+        let z = hash256("my message".as_bytes());
 
         // public key corresponding to the private key = `hash256("my secret".as_bytes())`
         let public_key = Point::from_affine(
@@ -168,12 +168,70 @@ pub mod tests {
             ),
         );
 
-        assert!(ECDSA::verify(z, signature, public_key));
+        assert!(ECDSA::verify(&z, signature, public_key));
+    }
+
+    #[test]
+    fn test_verify_signature_2() {
+        let z = [
+            236, 32, 139, 170, 15, 193, 193, 159, 112, 138, 156, 169, 111, 222, 255, 58, 195, 242,
+            48, 187, 74, 123, 164, 174, 222, 73, 66, 173, 0, 60, 15, 96,
+        ];
+
+        let public_key = Point::from_affine(
+            BaseFelt::from_hex_unchecked(
+                "887387e452b8eacc4acfde10d9aaf7f6d9a0f975aabb10d006e4da568744d06c",
+            ),
+            BaseFelt::from_hex_unchecked(
+                "61de6d95231cd89026e286df3b6ae4a894a3378e393e93a0f45b666329a0ae34",
+            ),
+        )
+        .unwrap();
+
+        let signature = ECDSASignature::new(
+            ScalarFelt::from_hex_unchecked(
+                "ac8d1c87e51d0d441be8b3dd5b05c8795b48875dffe00b7ffcfac23010d3a395",
+            ),
+            ScalarFelt::from_hex_unchecked(
+                "68342ceff8935ededd102dd876ffd6ba72d6a427a3edb13d26eb0781cb423c4",
+            ),
+        );
+
+        assert!(ECDSA::verify(&z, signature, public_key));
+    }
+
+    #[test]
+    fn test_verify_signature_3() {
+        let z = [
+            124, 7, 111, 243, 22, 105, 42, 61, 126, 179, 195, 187, 15, 139, 20, 136, 207, 114, 225,
+            175, 205, 146, 158, 41, 48, 112, 50, 153, 122, 131, 138, 61,
+        ];
+
+        let public_key = Point::from_affine(
+            BaseFelt::from_hex_unchecked(
+                "887387e452b8eacc4acfde10d9aaf7f6d9a0f975aabb10d006e4da568744d06c",
+            ),
+            BaseFelt::from_hex_unchecked(
+                "61de6d95231cd89026e286df3b6ae4a894a3378e393e93a0f45b666329a0ae34",
+            ),
+        )
+        .unwrap();
+
+        let signature = ECDSASignature::new(
+            ScalarFelt::from_hex_unchecked(
+                "eff69ef2b1bd93a66ed5219add4fb51e11a840f404876325a1e8ffe0529a2c",
+            ),
+            ScalarFelt::from_hex_unchecked(
+                "c7207fee197d27c618aea621406f6bf5ef6fca38681d82b2f06fddbdce6feab6",
+            ),
+        );
+
+        assert!(ECDSA::verify(&z, signature, public_key));
     }
 
     #[test]
     fn test_verify_invalid_signature() {
-        let z = "my message".as_bytes();
+        let z = hash256("my message".as_bytes());
 
         // public key corresponding to the private key = `hash256("my secret".as_bytes())`
         let mut public_key = Point::from_affine(
@@ -198,6 +256,6 @@ pub mod tests {
         // Add noise to public key to make it invalid
         public_key = public_key.operate_with(&Secp256k1::generator());
 
-        assert!(!ECDSA::verify(z, signature, public_key));
+        assert!(!ECDSA::verify(&z, signature, public_key));
     }
 }

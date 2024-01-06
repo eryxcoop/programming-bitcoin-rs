@@ -9,19 +9,22 @@ pub(crate) enum Chain {
     MainNet,
 }
 
-#[derive(Debug, PartialEq, Eq)]
-pub(crate) struct Address(String);
-
-impl Address {
-    fn prefix(chain: Chain) -> u8 {
-        match chain {
+impl Chain {
+    fn code(self) -> u8 {
+        match self {
             Chain::TestNet => 0x6f,
             Chain::MainNet => 0x00,
         }
     }
+}
+
+#[derive(Debug, PartialEq, Eq)]
+pub(crate) struct Address(String);
+
+impl Address {
     fn from_public_key_compressed(key: &PublicKey, chain: Chain) -> Self {
         let hash = {
-            let mut hash = vec![Self::prefix(chain)];
+            let mut hash = vec![chain.code()];
             hash.extend_from_slice(&hash160(&Serializer::serialize_point_compressed_sec(key)));
             hash
         };
@@ -30,7 +33,7 @@ impl Address {
 
     fn from_public_key_uncompressed(key: &PublicKey, chain: Chain) -> Self {
         let hash = {
-            let mut hash = vec![Self::prefix(chain)];
+            let mut hash = vec![chain.code()];
             hash.extend_from_slice(&hash160(&Serializer::serialize_point_uncompressed_sec(key)));
             hash
         };

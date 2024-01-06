@@ -119,7 +119,7 @@ impl Serializer {
         }
 
         for _ in input.iter().take_while(|&&byte| byte == 0) {
-            result.push(1);
+            result.push(0x31);
         }
         result.reverse();
 

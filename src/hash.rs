@@ -17,6 +17,10 @@ pub(crate) fn ripemd160(data: &[u8]) -> [u8; 20] {
     hasher.finalize().into()
 }
 
+pub(crate) fn hash160(data: &[u8]) -> [u8; 20] {
+    ripemd160(&sha256(data))
+}
+
 #[cfg(test)]
 pub mod tests {
     use crate::hash::{hash256, sha256};

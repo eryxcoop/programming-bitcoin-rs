@@ -1,13 +1,12 @@
-use lambdaworks_math::unsigned_integer::element::U256;
-
-use crate::{
-    hash::hash256,
-    secp256k1::{
-        curve::Point,
-        fields::{BaseFelt, ScalarFelt},
+use lambdaworks_math::{
+    field::{
+        element::FieldElement,
+        fields::montgomery_backed_prime_fields::{IsModulus, U256PrimeField},
     },
-    signature::ECDSASignature,
+    unsigned_integer::element::U256,
 };
+
+use crate::{hash::hash256, secp256k1::curve::Point, signature::ECDSASignature};
 
 pub(crate) struct Serializer;
 
@@ -40,19 +39,18 @@ impl Serializer {
         result
     }
 
-    pub fn serialize_base_felt_be(element: &BaseFelt) -> [u8; 32] {
-        Self::serialize_u256_element_be(&element.representative())
-    }
-
-    pub fn serialize_scalar_felt_be(element: &ScalarFelt) -> [u8; 32] {
+    pub fn serialize_felt_be<M>(element: &FieldElement<U256PrimeField<M>>) -> [u8; 32]
+    where
+        M: IsModulus<U256> + Clone,
+    {
         Self::serialize_u256_element_be(&element.representative())
     }
 
     pub fn serialize_point_uncompressed_sec(point: &Point) -> [u8; 65] {
         let point = point.to_affine();
         let [x, y, _] = point.coordinates();
-        let serialized_x = Self::serialize_base_felt_be(x);
-        let serialized_y = Self::serialize_base_felt_be(y);
+        let serialized_x = Self::serialize_felt_be(x);
+        let serialized_y = Self::serialize_felt_be(y);
 
         let mut result = [0u8; 1 + 32 + 32];
         result[0] = 4;
@@ -64,7 +62,7 @@ impl Serializer {
     pub fn serialize_point_compressed_sec(point: &Point) -> [u8; 33] {
         let point = point.to_affine();
         let [x, y, _] = point.coordinates();
-        let serialized_x = Self::serialize_base_felt_be(x);
+        let serialized_x = Self::serialize_felt_be(x);
 
         let mut result = [0u8; 1 + 32];
         if y.representative().limbs[3] & 1 == 0 {
@@ -154,7 +152,7 @@ mod tests {
             66, 101, 59, 198, 101, 121, 112, 130, 2, 159, 2, 132, 81, 21, 11, 179, 64, 179, 95, 42,
             241, 244, 197, 43, 2, 16, 251, 145, 174, 166, 112, 195,
         ];
-        let serialized_base_felt = Serializer::serialize_base_felt_be(&base_felt);
+        let serialized_base_felt = Serializer::serialize_felt_be(&base_felt);
         assert_eq!(serialized_base_felt, expected_bytes);
     }
 

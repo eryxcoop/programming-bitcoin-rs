@@ -9,3 +9,4 @@ edition = "2021"
 lambdaworks-math = {git="https://github.com/schouhy/lambdaworks.git", branch="fix-inv-overflow"}
 rand = "0.8.5"
 sha2 = "0.10"
+ripemd = "0.1.3"

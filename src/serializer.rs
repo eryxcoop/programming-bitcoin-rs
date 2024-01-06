@@ -1,6 +1,7 @@
 use lambdaworks_math::unsigned_integer::element::U256;
 
 use crate::{
+    hash::hash256,
     secp256k1::{
         curve::Point,
         fields::{BaseFelt, ScalarFelt},
@@ -87,6 +88,13 @@ impl Serializer {
         result.push(2);
         result.extend_from_slice(&serialized_s);
         result
+    }
+
+    pub fn base58_encode_with_checksum(input: &[u8]) -> String {
+        let mut input_with_checksum = Vec::with_capacity(input.len() + 32);
+        input_with_checksum.extend_from_slice(input);
+        input_with_checksum.extend_from_slice(&hash256(input)[..4]);
+        Self::base58_encode(&input_with_checksum)
     }
 
     pub fn base58_encode(input: &[u8]) -> String {

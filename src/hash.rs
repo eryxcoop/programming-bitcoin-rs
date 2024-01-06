@@ -54,6 +54,8 @@ pub mod tests {
     #[test]
     fn test_ripemd160() {
         let z = ripemd160(&[]);
+
+        // z_expected = 0x9c1185a5c5e9fc54612808977ee8f548b2258d31
         let z_expected = [
             156, 17, 133, 165, 197, 233, 252, 84, 97, 40, 8, 151, 126, 232, 245, 72, 178, 37, 141,
             49,

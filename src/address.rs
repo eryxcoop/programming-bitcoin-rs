@@ -1,13 +1,12 @@
-use crate::{
-    hash::{hash160, ripemd160},
-    serializer::Serializer,
-    signature::PublicKey,
-};
+use crate::{hash::hash160, serializer::Serializer, signature::PublicKey};
 
 pub(crate) enum Chain {
     TestNet,
     MainNet,
 }
+
+#[derive(Debug, PartialEq, Eq)]
+pub(crate) struct Address(String);
 
 impl Chain {
     fn code(self) -> u8 {
@@ -18,26 +17,22 @@ impl Chain {
     }
 }
 
-#[derive(Debug, PartialEq, Eq)]
-pub(crate) struct Address(String);
-
 impl Address {
-    fn from_public_key_compressed(key: &PublicKey, chain: Chain) -> Self {
+    fn from_serialized_key(data: &[u8], chain: Chain) -> Self {
         let hash = {
             let mut hash = vec![chain.code()];
-            hash.extend_from_slice(&hash160(&Serializer::serialize_point_compressed_sec(key)));
+            hash.extend_from_slice(&hash160(data));
             hash
         };
         Self(Serializer::base58_encode_with_checksum(&hash))
     }
 
+    fn from_public_key_compressed(key: &PublicKey, chain: Chain) -> Self {
+        Self::from_serialized_key(&Serializer::serialize_point_compressed_sec(&key), chain)
+    }
+
     fn from_public_key_uncompressed(key: &PublicKey, chain: Chain) -> Self {
-        let hash = {
-            let mut hash = vec![chain.code()];
-            hash.extend_from_slice(&hash160(&Serializer::serialize_point_uncompressed_sec(key)));
-            hash
-        };
-        Self(Serializer::base58_encode_with_checksum(&hash))
+        Self::from_serialized_key(&Serializer::serialize_point_uncompressed_sec(&key), chain)
     }
 }
 

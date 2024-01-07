@@ -1,6 +1,21 @@
 pub(crate) type TransactionId = [u8; 32];
 
-pub(crate) type Script = Vec<u8>;
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(crate) enum Command {
+    Operation(u8),
+    Element(Vec<u8>),
+}
+
+#[derive(Debug, PartialEq, Eq)]
+pub(crate) struct Script {
+    commands: Vec<Command>,
+}
+
+impl Script {
+    pub fn new(commands: Vec<Command>) -> Self {
+        Self { commands }
+    }
+}
 
 pub(crate) struct Transaction {
     version: u32,

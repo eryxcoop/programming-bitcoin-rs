@@ -11,7 +11,10 @@ impl Deserializer {
     fn read_bytes<const N: usize>(bytes: &[u8]) -> Result<[u8; N], DeserializerError> {
         bytes
             .get(..N)
-            .and_then(|slice| slice.try_into().ok())
+            .and_then(|slice| {
+                let array: Result<[u8; N], _> = slice.try_into();
+                array.ok()
+            })
             .ok_or(DeserializerError::ExpectedMoreBytes)
     }
 

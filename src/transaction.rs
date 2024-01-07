@@ -15,6 +15,10 @@ impl Script {
     pub fn new(commands: Vec<Command>) -> Self {
         Self { commands }
     }
+
+    pub fn empty() -> Self {
+        Self { commands: vec![]}
+    }
 }
 
 pub(crate) struct Transaction {

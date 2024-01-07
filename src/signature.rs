@@ -1,5 +1,4 @@
 use crate::{
-    hash::hash256,
     random::IsRandomScalarGenerator,
     secp256k1::{
         curve::Secp256k1,

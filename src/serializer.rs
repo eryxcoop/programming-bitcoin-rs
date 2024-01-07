@@ -11,6 +11,27 @@ use crate::{hash::hash256, secp256k1::curve::Point, signature::ECDSASignature};
 pub(crate) struct Serializer;
 
 impl Serializer {
+    pub fn serialize_u64_varint(uint: u64) -> Vec<u8> {
+        if uint < 253 {
+            vec![uint as u8]
+        } else if uint < 0x10000 {
+            let mut result = [0u8; 3];
+            result[0] = 253;
+            result[1..].copy_from_slice(&u64::to_le_bytes(uint)[..2]);
+            result.to_vec()
+        } else if uint < 0x100000000 {
+            let mut result = [0u8; 5];
+            result[0] = 254;
+            result[1..].copy_from_slice(&u64::to_le_bytes(uint)[..4]);
+            result.to_vec()
+        } else {
+            let mut result = [0u8; 9];
+            result[0] = 255;
+            result[1..].copy_from_slice(&u64::to_le_bytes(uint));
+            result.to_vec()
+        }
+    }
+
     pub fn serialize_u256_element_be(element: &U256) -> [u8; 32] {
         let mut result = [0u8; 32];
         for (i, limb) in element.limbs.iter().enumerate() {
@@ -142,6 +163,38 @@ mod tests {
     };
 
     use super::Serializer;
+
+    #[test]
+    fn test_serialize_varint_1() {
+        let uint = 1u64;
+        let expected_bytes = [1];
+        let bytes = Serializer::serialize_u64_varint(uint);
+        assert_eq!(bytes, expected_bytes);
+    }
+
+    #[test]
+    fn test_serialize_varint_2() {
+        let uint = 62500u64;
+        let expected_bytes = [253, 36, 244];
+        let bytes = Serializer::serialize_u64_varint(uint);
+        assert_eq!(bytes, expected_bytes);
+    }
+
+    #[test]
+    fn test_serialize_varint_3() {
+        let uint = 15625000u64;
+        let expected_bytes = [254, 40, 107, 238, 0];
+        let bytes = Serializer::serialize_u64_varint(uint);
+        assert_eq!(bytes, expected_bytes);
+    }
+
+    #[test]
+    fn test_serialize_varint_4() {
+        let uint = 15258789066406312607_u64;
+        let expected_bytes = [255, 159, 58, 195, 181, 207, 27, 194, 211];
+        let bytes = Serializer::serialize_u64_varint(uint);
+        assert_eq!(bytes, expected_bytes);
+    }
 
     #[test]
     fn test_serialize_base_felt_be() {

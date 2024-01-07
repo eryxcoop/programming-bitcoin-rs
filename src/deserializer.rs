@@ -9,40 +9,35 @@ pub enum DeserializerError {
 
 impl Deserializer {
     fn read_bytes<const N: usize>(bytes: &[u8]) -> Result<[u8; N], DeserializerError> {
-        if bytes.len() < N {
-            Err(DeserializerError::ExpectedMoreBytes)
-        } else {
-            let bytes: [u8; N] = bytes[..N]
-                .try_into()
-                .map_err(|_| DeserializerError::ExpectedMoreBytes)?;
-            Ok(bytes)
-        }
+        bytes
+            .get(..N)
+            .and_then(|slice| slice.try_into().ok())
+            .ok_or(DeserializerError::ExpectedMoreBytes)
     }
 
     pub fn parse_transaction_version(bytes: &[u8]) -> Result<u32, DeserializerError> {
-        let version_bytes =
-            Self::read_bytes(bytes).map_err(|_| DeserializerError::ParseTransactionVersionError)?;
+        let version_bytes = Self::read_bytes::<4>(bytes)
+            .map_err(|_| DeserializerError::ParseTransactionVersionError)?;
 
         Ok(u32::from_le_bytes(version_bytes))
     }
 
     pub fn parse_varint(bytes: &[u8]) -> Result<u64, DeserializerError> {
-        if let Some(&flag) = bytes.get(0) {
-            if flag < 253 {
-                Ok(flag as u64)
-            } else if flag == 253 {
-                let mut int_bytes = [0u8; 8];
-                int_bytes[..2].copy_from_slice(&Self::read_bytes::<2>(&bytes[1..])?);
-                Ok(u64::from_le_bytes(int_bytes))
-            } else if flag == 254 {
-                let mut int_bytes = [0u8; 8];
-                int_bytes[..4].copy_from_slice(&Self::read_bytes::<4>(&bytes[1..])?);
-                Ok(u64::from_le_bytes(int_bytes))
-            } else {
-                Ok(u64::from_le_bytes(Self::read_bytes::<8>(&bytes[1..])?))
+        match bytes.get(0) {
+            Some(&flag) if flag < 253 => Ok(flag as u64),
+            Some(&253) => {
+                let int_bytes = Self::read_bytes::<2>(&bytes[1..])?;
+                Ok(u16::from_le_bytes(int_bytes) as u64)
             }
-        } else {
-            Err(DeserializerError::ParseVarintError)
+            Some(&254) => {
+                let int_bytes = Self::read_bytes::<4>(&bytes[1..])?;
+                Ok(u32::from_le_bytes(int_bytes) as u64)
+            }
+            Some(&255) => {
+                let int_bytes = Self::read_bytes::<8>(&bytes[1..])?;
+                Ok(u64::from_le_bytes(int_bytes))
+            }
+            _ => Err(DeserializerError::ParseVarintError),
         }
     }
 }

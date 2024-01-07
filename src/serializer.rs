@@ -12,23 +12,17 @@ pub(crate) struct Serializer;
 
 impl Serializer {
     pub fn serialize_u64_varint(uint: u64) -> Vec<u8> {
+        let bytes: [u8; 8] = u64::to_le_bytes(uint);
         if uint < 253 {
             vec![uint as u8]
         } else if uint < 0x10000 {
-            let mut result = [0u8; 3];
-            result[0] = 253;
-            result[1..].copy_from_slice(&u64::to_le_bytes(uint)[..2]);
-            result.to_vec()
+            vec![253, bytes[0], bytes[1]]
         } else if uint < 0x100000000 {
-            let mut result = [0u8; 5];
-            result[0] = 254;
-            result[1..].copy_from_slice(&u64::to_le_bytes(uint)[..4]);
-            result.to_vec()
+            vec![254, bytes[0], bytes[1], bytes[2], bytes[3]]
         } else {
-            let mut result = [0u8; 9];
-            result[0] = 255;
-            result[1..].copy_from_slice(&u64::to_le_bytes(uint));
-            result.to_vec()
+            vec![
+                255, bytes[0], bytes[1], bytes[2], bytes[3], bytes[4], bytes[5], bytes[6], bytes[7],
+            ]
         }
     }
 

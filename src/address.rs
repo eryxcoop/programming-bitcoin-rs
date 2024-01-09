@@ -1,4 +1,4 @@
-use crate::{hash::hash160, serializer::Serializer, signature::PublicKey};
+use crate::{hash::hash160, serializer::serializer::Serializer, signature::PublicKey};
 
 pub(crate) enum Chain {
     TestNet,

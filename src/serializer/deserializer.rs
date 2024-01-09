@@ -122,7 +122,7 @@ impl Deserializer {
 #[cfg(test)]
 mod tests {
     use crate::{
-        deserializer::DeserializerError,
+        serializer::deserializer::DeserializerError,
         transaction::{Command, Input, Script},
     };
 

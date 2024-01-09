@@ -1,6 +1,6 @@
 use crate::transaction::{Command, Script};
 
-use super::{CanSerialize, VarIntSerializer};
+use super::{CanParse, CanSerialize, VarIntSerializer, ParserError, read_bytes};
 
 pub(crate) struct CommandSerializer;
 pub(crate) struct ScriptSerializer;
@@ -48,6 +48,58 @@ impl CanSerialize<Script> for ScriptSerializer {
         let mut result = VarIntSerializer::serialize(&(serialized_script.len() as u64));
         result.extend_from_slice(&serialized_script);
         result
+    }
+}
+
+impl CanParse<Script> for ScriptSerializer {
+    fn parse(bytecode: &[u8]) -> Result<(Script, usize), super::ParserError> {
+        let (length, length_prefix) = VarIntSerializer::parse(bytecode)?;
+        let bytecode = &bytecode[length_prefix..];
+        let mut count = 0;
+        let mut commands = Vec::new();
+        while count < length as usize {
+            let command = match bytecode.get(count) {
+                Some(&value) if value <= 75 => {
+                    count += 1;
+                    let element_bytes = bytecode
+                        .get(count..(count + value as usize))
+                        .ok_or(ParserError::ParseError)?;
+                    count += value as usize;
+                    Command::Element(element_bytes.to_vec())
+                }
+                Some(&76) => {
+                    count += 1;
+                    let element_length =
+                        *bytecode.get(count).ok_or(ParserError::ParseError)? as usize;
+                    count += 1;
+                    let element_bytes = bytecode
+                        .get(count..(count + element_length))
+                        .ok_or(ParserError::ParseError)?;
+                    count += element_length;
+                    Command::Element(element_bytes.to_vec())
+                }
+                Some(&77) => {
+                    count += 1;
+                    let element_length_bytes = read_bytes::<2>(&bytecode[count..])?;
+                    let element_length = u16::from_le_bytes(element_length_bytes) as usize;
+                    count += 2;
+                    let element_bytes = bytecode
+                        .get(count..(count + element_length))
+                        .ok_or(ParserError::ParseError)?;
+                    count += element_length;
+                    Command::Element(element_bytes.to_vec())
+                }
+                Some(&value) => {
+                    count += 1;
+                    Command::Operation(value)
+                }
+                None => return Err(ParserError::ParseError),
+            };
+            commands.push(command);
+        }
+
+        let script = Script::new(commands).map_err(|_| ParserError::ParseError)?;
+        Ok((script, length_prefix + count))
     }
 }
 

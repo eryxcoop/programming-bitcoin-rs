@@ -13,23 +13,13 @@ use crate::{
     transaction::{Command, Script},
 };
 
-use super::{CanSerialize, SerializerError, VarIntSerializer};
+use super::{CanSerialize, SerializerError, U256BigEndianSerializer, VarIntSerializer};
 
 pub(crate) struct Serializer;
 
 impl Serializer {
-    pub fn serialize_u256_element_be(element: &U256) -> [u8; 32] {
-        let mut result = [0u8; 32];
-        for (i, limb) in element.limbs.iter().enumerate() {
-            let bytes = limb.to_be_bytes();
-            for (j, byte) in bytes.iter().enumerate() {
-                result[8 * i + j] = *byte;
-            }
-        }
-        result
-    }
     pub fn serialize_u256_element_der_format(element: &U256) -> Vec<u8> {
-        let mut serialized: Vec<u8> = Self::serialize_u256_element_be(element)
+        let mut serialized: Vec<u8> = U256BigEndianSerializer::serialize(element)
             .into_iter()
             .skip_while(|&byte| byte == 0)
             .collect();
@@ -50,7 +40,7 @@ impl Serializer {
     where
         M: IsModulus<U256> + Clone,
     {
-        Self::serialize_u256_element_be(&element.representative())
+        U256BigEndianSerializer::serialize(&element.representative())
     }
 
     pub fn serialize_point_uncompressed_sec(point: &Point) -> [u8; 65] {
@@ -164,7 +154,7 @@ impl Serializer {
             .iter()
             .flat_map(Self::serialize_command)
             .collect();
-        let mut result = VarIntSerializer::serialize(&(serialized_script.len() as u64))?;
+        let mut result = VarIntSerializer::serialize(&(serialized_script.len() as u64));
         result.extend_from_slice(&serialized_script);
         Ok(result)
     }
@@ -306,33 +296,33 @@ mod tests {
     #[test]
     fn test_serialize_point_compressed_sec_1() {
         let point = Secp256k1::generator().operate_with_self(5001u64);
-        let serialized_point = Serializer::serialize_point_compressed_sec(&point);
         let expected_bytes = [
             3, 87, 164, 243, 104, 134, 138, 138, 109, 87, 41, 145, 228, 132, 230, 100, 129, 15,
             241, 76, 5, 192, 250, 2, 50, 117, 37, 17, 81, 254, 14, 83, 209,
         ];
+        let serialized_point = Serializer::serialize_point_compressed_sec(&point);
         assert_eq!(serialized_point, expected_bytes);
     }
 
     #[test]
     fn test_serialize_point_compressed_sec_2() {
         let point = Secp256k1::generator().operate_with_self(33549155665686099u64);
-        let serialized_point = Serializer::serialize_point_compressed_sec(&point);
         let expected_bytes = [
             2, 147, 62, 194, 210, 177, 17, 185, 39, 55, 236, 18, 241, 197, 210, 15, 50, 51, 160,
             173, 33, 205, 139, 54, 208, 188, 167, 160, 207, 165, 203, 135, 1,
         ];
+        let serialized_point = Serializer::serialize_point_compressed_sec(&point);
         assert_eq!(serialized_point, expected_bytes);
     }
 
     #[test]
     fn test_serialize_point_compressed_sec_3() {
         let point = Secp256k1::generator().operate_with_self(0xdeadbeef54321u64);
-        let serialized_point = Serializer::serialize_point_compressed_sec(&point);
         let expected_bytes = [
             2, 150, 190, 91, 18, 146, 246, 200, 86, 179, 197, 101, 78, 136, 111, 193, 53, 17, 70,
             32, 89, 8, 156, 223, 156, 71, 150, 35, 191, 203, 231, 118, 144,
         ];
+        let serialized_point = Serializer::serialize_point_compressed_sec(&point);
         assert_eq!(serialized_point, expected_bytes);
     }
 

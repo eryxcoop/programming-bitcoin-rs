@@ -5,18 +5,18 @@ pub(crate) struct VarIntSerializer;
 impl CanSerialize<u64> for VarIntSerializer {
     type Output = Vec<u8>;
 
-    fn serialize(uint: &u64) -> Result<Self::Output, super::SerializerError> {
+    fn serialize(uint: &u64) -> Self::Output {
         let bytes: [u8; 8] = u64::to_le_bytes(*uint);
         if *uint < 253 {
-            Ok(vec![*uint as u8])
+            vec![*uint as u8]
         } else if *uint < 0x10000 {
-            Ok(vec![253, bytes[0], bytes[1]])
+            vec![253, bytes[0], bytes[1]]
         } else if *uint < 0x100000000 {
-            Ok(vec![254, bytes[0], bytes[1], bytes[2], bytes[3]])
+            vec![254, bytes[0], bytes[1], bytes[2], bytes[3]]
         } else {
-            Ok(vec![
+            vec![
                 255, bytes[0], bytes[1], bytes[2], bytes[3], bytes[4], bytes[5], bytes[6], bytes[7],
-            ])
+            ]
         }
     }
 
@@ -47,7 +47,7 @@ mod test {
     fn test_serialize_varint_1() {
         let uint = 1u64;
         let expected_bytes = [1];
-        let bytes = VarIntSerializer::serialize(&uint).unwrap();
+        let bytes = VarIntSerializer::serialize(&uint);
         assert_eq!(bytes, expected_bytes);
     }
 
@@ -55,7 +55,7 @@ mod test {
     fn test_serialize_varint_2() {
         let uint = 62500u64;
         let expected_bytes = [253, 36, 244];
-        let bytes = VarIntSerializer::serialize(&uint).unwrap();
+        let bytes = VarIntSerializer::serialize(&uint);
         assert_eq!(bytes, expected_bytes);
     }
 
@@ -63,7 +63,7 @@ mod test {
     fn test_serialize_varint_3() {
         let uint = 15625000u64;
         let expected_bytes = [254, 40, 107, 238, 0];
-        let bytes = VarIntSerializer::serialize(&uint).unwrap();
+        let bytes = VarIntSerializer::serialize(&uint);
         assert_eq!(bytes, expected_bytes);
     }
 
@@ -71,7 +71,7 @@ mod test {
     fn test_serialize_varint_4() {
         let uint = 15258789066406312607_u64;
         let expected_bytes = [255, 159, 58, 195, 181, 207, 27, 194, 211];
-        let bytes = VarIntSerializer::serialize(&uint).unwrap();
+        let bytes = VarIntSerializer::serialize(&uint);
         assert_eq!(bytes, expected_bytes);
     }
     #[test]

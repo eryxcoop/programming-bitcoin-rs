@@ -1,16 +1,18 @@
 pub mod deserializer;
 pub mod serializer;
-mod u64;
 mod u256;
+mod u64;
 
+pub(crate) use self::u256::U256BigEndianSerializer;
 pub(crate) use self::u64::VarIntSerializer;
-pub(crate) use self::u256::U256Serializer;
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum SerializerError {}
 
 #[derive(Debug, PartialEq, Eq)]
-pub enum ParserError { ParseError }
+pub enum ParserError {
+    ParseError,
+}
 
 pub(crate) fn read_bytes<const N: usize>(bytes: &[u8]) -> Result<[u8; N], ParserError> {
     bytes
@@ -24,6 +26,6 @@ pub(crate) fn read_bytes<const N: usize>(bytes: &[u8]) -> Result<[u8; N], Parser
 
 pub(crate) trait CanSerialize<T> {
     type Output: AsRef<[u8]>;
-    fn serialize(object: &T) -> Result<Self::Output, SerializerError>;
+    fn serialize(object: &T) -> Self::Output;
     fn parse(object: &[u8]) -> Result<(T, usize), ParserError>;
 }

@@ -13,24 +13,11 @@ use crate::{
     transaction::{Command, Script},
 };
 
+use super::{CanSerialize, SerializerError, VarIntSerializer};
+
 pub(crate) struct Serializer;
 
 impl Serializer {
-    pub fn serialize_u64_varint(uint: u64) -> Vec<u8> {
-        let bytes: [u8; 8] = u64::to_le_bytes(uint);
-        if uint < 253 {
-            vec![uint as u8]
-        } else if uint < 0x10000 {
-            vec![253, bytes[0], bytes[1]]
-        } else if uint < 0x100000000 {
-            vec![254, bytes[0], bytes[1], bytes[2], bytes[3]]
-        } else {
-            vec![
-                255, bytes[0], bytes[1], bytes[2], bytes[3], bytes[4], bytes[5], bytes[6], bytes[7],
-            ]
-        }
-    }
-
     pub fn serialize_u256_element_be(element: &U256) -> [u8; 32] {
         let mut result = [0u8; 32];
         for (i, limb) in element.limbs.iter().enumerate() {
@@ -171,15 +158,15 @@ impl Serializer {
         }
     }
 
-    pub fn serialize_script(script: &Script) -> Vec<u8> {
+    pub fn serialize_script(script: &Script) -> Result<Vec<u8>, SerializerError> {
         let serialized_script: Vec<u8> = script
             .commands()
             .iter()
             .flat_map(Self::serialize_command)
             .collect();
-        let mut result = Self::serialize_u64_varint(serialized_script.len() as u64);
+        let mut result = VarIntSerializer::serialize(serialized_script.len() as u64)?;
         result.extend_from_slice(&serialized_script);
-        result
+        Ok(result)
     }
 }
 
@@ -201,38 +188,6 @@ mod tests {
     };
 
     use super::Serializer;
-
-    #[test]
-    fn test_serialize_varint_1() {
-        let uint = 1u64;
-        let expected_bytes = [1];
-        let bytes = Serializer::serialize_u64_varint(uint);
-        assert_eq!(bytes, expected_bytes);
-    }
-
-    #[test]
-    fn test_serialize_varint_2() {
-        let uint = 62500u64;
-        let expected_bytes = [253, 36, 244];
-        let bytes = Serializer::serialize_u64_varint(uint);
-        assert_eq!(bytes, expected_bytes);
-    }
-
-    #[test]
-    fn test_serialize_varint_3() {
-        let uint = 15625000u64;
-        let expected_bytes = [254, 40, 107, 238, 0];
-        let bytes = Serializer::serialize_u64_varint(uint);
-        assert_eq!(bytes, expected_bytes);
-    }
-
-    #[test]
-    fn test_serialize_varint_4() {
-        let uint = 15258789066406312607_u64;
-        let expected_bytes = [255, 159, 58, 195, 181, 207, 27, 194, 211];
-        let bytes = Serializer::serialize_u64_varint(uint);
-        assert_eq!(bytes, expected_bytes);
-    }
 
     #[test]
     fn test_serialize_base_felt_be() {
@@ -463,7 +418,7 @@ mod tests {
             109, 149, 35, 28, 216, 144, 38, 226, 134, 223, 59, 106, 228, 168, 148, 163, 55, 142,
             57, 62, 147, 160, 244, 91, 102, 99, 41, 160, 174, 52, 172,
         ];
-        let bytes = Serializer::serialize_script(&script);
+        let bytes = Serializer::serialize_script(&script).unwrap();
         assert_eq!(bytes, expected_bytes);
     }
 
@@ -490,7 +445,7 @@ mod tests {
             78, 99, 30, 54, 36, 165, 69, 222, 63, 137, 245, 216, 104, 76, 123, 129, 56, 189, 148,
             189, 213, 49, 210, 226, 19, 191, 1, 107, 39, 138,
         ];
-        let bytes = Serializer::serialize_script(&script);
+        let bytes = Serializer::serialize_script(&script).unwrap();
         assert_eq!(bytes, expected_bytes);
     }
 
@@ -583,7 +538,7 @@ mod tests {
             193, 168, 100, 121, 12, 120, 44, 118, 33, 86, 96, 221, 48, 151, 145, 208, 107, 208,
             175, 63, 152, 205, 164, 188, 70, 41, 177, 110, 135, 145, 105, 167, 124, 167, 135,
         ];
-        let bytes = Serializer::serialize_script(&script);
+        let bytes = Serializer::serialize_script(&script).unwrap();
         assert_eq!(bytes, expected_bytes);
     }
 }

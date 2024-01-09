@@ -1,73 +1,36 @@
 use crate::transaction::{Command, Input, Output, Script};
 
+use super::{read_bytes, CanSerialize, ParserError, VarIntSerializer};
+
 pub(crate) struct Deserializer;
 
-#[derive(Debug, PartialEq, Eq)]
-pub enum DeserializerError {
-    ExpectedMoreBytes,
-    ParseTransactionVersionError,
-    ParseVarintError,
-    InvalidCommands,
-}
-
 impl Deserializer {
-    fn read_bytes<const N: usize>(bytes: &[u8]) -> Result<[u8; N], DeserializerError> {
-        bytes
-            .get(..N)
-            .and_then(|slice| {
-                let array: Result<[u8; N], _> = slice.try_into();
-                array.ok()
-            })
-            .ok_or(DeserializerError::ExpectedMoreBytes)
-    }
-
-    pub fn parse_transaction_version(bytes: &[u8]) -> Result<u32, DeserializerError> {
-        let version_bytes = Self::read_bytes::<4>(bytes)
-            .map_err(|_| DeserializerError::ParseTransactionVersionError)?;
+    pub fn parse_transaction_version(bytes: &[u8]) -> Result<u32, ParserError> {
+        let version_bytes = read_bytes::<4>(bytes).map_err(|_| ParserError::ParseError)?;
 
         Ok(u32::from_le_bytes(version_bytes))
     }
 
-    pub fn parse_varint(bytes: &[u8]) -> Result<(u64, usize), DeserializerError> {
-        match bytes.first() {
-            Some(&flag) if flag < 253 => Ok((flag as u64, 1)),
-            Some(&253) => {
-                let int_bytes = Self::read_bytes::<2>(&bytes[1..])?;
-                Ok((u16::from_le_bytes(int_bytes) as u64, 3))
-            }
-            Some(&254) => {
-                let int_bytes = Self::read_bytes::<4>(&bytes[1..])?;
-                Ok((u32::from_le_bytes(int_bytes) as u64, 5))
-            }
-            Some(&255) => {
-                let int_bytes = Self::read_bytes::<8>(&bytes[1..])?;
-                Ok((u64::from_le_bytes(int_bytes), 9))
-            }
-            _ => Err(DeserializerError::ParseVarintError),
-        }
-    }
-
-    pub fn parse_input(bytes: &[u8]) -> Result<(Input, usize), DeserializerError> {
-        let mut source_id =
-            Self::read_bytes::<32>(bytes).map_err(|_| DeserializerError::ExpectedMoreBytes)?;
+    pub fn parse_input(bytes: &[u8]) -> Result<(Input, usize), ParserError> {
+        let mut source_id = read_bytes::<32>(bytes).map_err(|_| ParserError::ParseError)?;
         source_id.reverse();
 
-        let source_index_bytes = Self::read_bytes::<4>(&bytes[32..])
-            .map_err(|_| DeserializerError::ExpectedMoreBytes)?;
+        let source_index_bytes =
+            read_bytes::<4>(&bytes[32..]).map_err(|_| ParserError::ParseError)?;
         let source_index = u32::from_le_bytes(source_index_bytes);
         let (script_sig, script_length) = Self::parse_script(&bytes[36..])?;
-        let sequence_bytes = Self::read_bytes::<4>(&bytes[(36 + script_length)..])?;
+        let sequence_bytes = read_bytes::<4>(&bytes[(36 + script_length)..])?;
         let sequence = u32::from_le_bytes(sequence_bytes);
         let input = Input::new(source_id, source_index, script_sig, sequence);
         Ok((input, 32 + 4 + script_length + 4))
     }
 
-    pub fn parse_output(_bytes: &[u8]) -> Result<(Output, usize), DeserializerError> {
+    pub fn parse_output(_bytes: &[u8]) -> Result<(Output, usize), ParserError> {
         todo!()
     }
 
-    pub fn parse_script(bytecode: &[u8]) -> Result<(Script, usize), DeserializerError> {
-        let (length, length_prefix) = Self::parse_varint(bytecode)?;
+    pub fn parse_script(bytecode: &[u8]) -> Result<(Script, usize), ParserError> {
+        let (length, length_prefix) = VarIntSerializer::parse(bytecode)?;
         let bytecode = &bytecode[length_prefix..];
         let mut count = 0;
         let mut commands = Vec::new();
@@ -77,31 +40,29 @@ impl Deserializer {
                     count += 1;
                     let element_bytes = bytecode
                         .get(count..(count + value as usize))
-                        .ok_or(DeserializerError::ExpectedMoreBytes)?;
+                        .ok_or(ParserError::ParseError)?;
                     count += value as usize;
                     Command::Element(element_bytes.to_vec())
                 }
                 Some(&76) => {
                     count += 1;
-                    let element_length = *bytecode
-                        .get(count)
-                        .ok_or(DeserializerError::ExpectedMoreBytes)?
-                        as usize;
+                    let element_length =
+                        *bytecode.get(count).ok_or(ParserError::ParseError)? as usize;
                     count += 1;
                     let element_bytes = bytecode
                         .get(count..(count + element_length))
-                        .ok_or(DeserializerError::ExpectedMoreBytes)?;
+                        .ok_or(ParserError::ParseError)?;
                     count += element_length;
                     Command::Element(element_bytes.to_vec())
                 }
                 Some(&77) => {
                     count += 1;
-                    let element_length_bytes = Self::read_bytes::<2>(&bytecode[count..])?;
+                    let element_length_bytes = read_bytes::<2>(&bytecode[count..])?;
                     let element_length = u16::from_le_bytes(element_length_bytes) as usize;
                     count += 2;
                     let element_bytes = bytecode
                         .get(count..(count + element_length))
-                        .ok_or(DeserializerError::ExpectedMoreBytes)?;
+                        .ok_or(ParserError::ParseError)?;
                     count += element_length;
                     Command::Element(element_bytes.to_vec())
                 }
@@ -109,12 +70,12 @@ impl Deserializer {
                     count += 1;
                     Command::Operation(value)
                 }
-                None => return Err(DeserializerError::ExpectedMoreBytes),
+                None => return Err(ParserError::ParseError),
             };
             commands.push(command);
         }
 
-        let script = Script::new(commands).map_err(|_| DeserializerError::InvalidCommands)?;
+        let script = Script::new(commands).map_err(|_| ParserError::ParseError)?;
         Ok((script, length_prefix + count))
     }
 }
@@ -122,7 +83,7 @@ impl Deserializer {
 #[cfg(test)]
 mod tests {
     use crate::{
-        serializer::deserializer::DeserializerError,
+        serializer::deserializer::ParserError,
         transaction::{Command, Input, Script},
     };
 
@@ -139,69 +100,9 @@ mod tests {
     #[test]
     fn test_parse_transaction_version_err() {
         let bytes = [1, 0, 0];
-        let expected_error = DeserializerError::ParseTransactionVersionError;
+        let expected_error = ParserError::ParseError;
         let version = Deserializer::parse_transaction_version(&bytes);
         assert_eq!(version.unwrap_err(), expected_error);
-    }
-
-    #[test]
-    fn test_parse_varint_1() {
-        let bytes = [1];
-        let expected_uint = 1u64;
-        let expected_prefix_length = 1;
-        let (uint, prefix_length) = Deserializer::parse_varint(&bytes).unwrap();
-        assert_eq!(uint, expected_uint);
-        assert_eq!(prefix_length, expected_prefix_length);
-    }
-
-    #[test]
-    fn test_parse_varint_2() {
-        let bytes = [1, 1];
-        let expected_uint = 1u64;
-        let expected_prefix_length = 1;
-        let (uint, prefix_length) = Deserializer::parse_varint(&bytes).unwrap();
-        assert_eq!(uint, expected_uint);
-        assert_eq!(prefix_length, expected_prefix_length);
-    }
-
-    #[test]
-    fn test_parse_varint_3() {
-        let bytes = [1, 253];
-        let expected_uint = 1u64;
-        let expected_prefix_length = 1;
-        let (uint, prefix_length) = Deserializer::parse_varint(&bytes).unwrap();
-        assert_eq!(uint, expected_uint);
-        assert_eq!(prefix_length, expected_prefix_length);
-    }
-
-    #[test]
-    fn test_parse_varint_4() {
-        let bytes = [253, 36, 244, 9];
-        let expected_uint = 62500u64;
-        let expected_prefix_length = 3;
-        let (uint, prefix_length) = Deserializer::parse_varint(&bytes).unwrap();
-        assert_eq!(uint, expected_uint);
-        assert_eq!(prefix_length, expected_prefix_length);
-    }
-
-    #[test]
-    fn test_parse_varint_5() {
-        let bytes = [254, 40, 107, 238, 0, 101];
-        let expected_uint = 15625000u64;
-        let expected_prefix_length = 5;
-        let (uint, prefix_length) = Deserializer::parse_varint(&bytes).unwrap();
-        assert_eq!(uint, expected_uint);
-        assert_eq!(prefix_length, expected_prefix_length);
-    }
-
-    #[test]
-    fn test_parse_varint_6() {
-        let bytes = [255, 159, 58, 195, 181, 207, 27, 194, 211, 11, 17];
-        let expected_uint = 15258789066406312607_u64;
-        let expected_prefix_length = 9;
-        let (uint, prefix_length) = Deserializer::parse_varint(&bytes).unwrap();
-        assert_eq!(uint, expected_uint);
-        assert_eq!(prefix_length, expected_prefix_length);
     }
 
     #[test]

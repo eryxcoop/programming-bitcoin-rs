@@ -164,7 +164,7 @@ impl Serializer {
             .iter()
             .flat_map(Self::serialize_command)
             .collect();
-        let mut result = VarIntSerializer::serialize(serialized_script.len() as u64)?;
+        let mut result = VarIntSerializer::serialize(&(serialized_script.len() as u64))?;
         result.extend_from_slice(&serialized_script);
         Ok(result)
     }

@@ -7,6 +7,7 @@ pub enum DeserializerError {
     ExpectedMoreBytes,
     ParseTransactionVersionError,
     ParseVarintError,
+    InvalidCommands,
 }
 
 impl Deserializer {
@@ -94,7 +95,7 @@ impl Deserializer {
             commands.push(command);
         }
 
-        Ok(Script::new(commands))
+        Script::new(commands).map_err(|_| DeserializerError::InvalidCommands)
     }
 }
 
@@ -199,7 +200,8 @@ mod tests {
                 142, 57, 62, 147, 160, 244, 91, 102, 99, 41, 160, 174, 52,
             ]),
             Command::Operation(0xac),
-        ]);
+        ])
+        .unwrap();
         let script = Deserializer::parse_script(&bytes).unwrap();
         assert_eq!(script, expected_script);
     }
@@ -225,7 +227,8 @@ mod tests {
                 3, 73, 252, 78, 99, 30, 54, 36, 165, 69, 222, 63, 137, 245, 216, 104, 76, 123, 129,
                 56, 189, 148, 189, 213, 49, 210, 226, 19, 191, 1, 107, 39, 138,
             ]),
-        ]);
+        ])
+        .unwrap();
         let script = Deserializer::parse_script(&bytes).unwrap();
         assert_eq!(script, expected_script);
     }
@@ -317,7 +320,8 @@ mod tests {
             Command::Operation(0x7c),
             Command::Operation(0xa7),
             Command::Operation(0x87),
-        ]);
+        ])
+        .unwrap();
         let script = Deserializer::parse_script(&bytes).unwrap();
         assert_eq!(script, expected_script);
     }

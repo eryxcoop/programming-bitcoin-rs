@@ -13,60 +13,14 @@ use crate::{
     transaction::{Command, Script},
 };
 
-use super::{CanSerialize, SerializerError, U256BigEndianSerializer, VarIntSerializer, U256DERSerializer};
+use super::{
+    public_key::FeltSerializer, CanSerialize, SerializerError, U256BigEndianSerializer,
+    U256DERSerializer, VarIntSerializer,
+};
 
 pub(crate) struct Serializer;
 
 impl Serializer {
-    pub fn serialize_felt_be<M>(element: &FieldElement<U256PrimeField<M>>) -> [u8; 32]
-    where
-        M: IsModulus<U256> + Clone,
-    {
-        U256BigEndianSerializer::serialize(&element.representative())
-    }
-
-    pub fn serialize_point_uncompressed_sec(point: &Point) -> [u8; 65] {
-        let point = point.to_affine();
-        let [x, y, _] = point.coordinates();
-        let serialized_x = Self::serialize_felt_be(x);
-        let serialized_y = Self::serialize_felt_be(y);
-
-        let mut result = [0u8; 1 + 32 + 32];
-        result[0] = 4;
-        result[1..(32 + 1)].copy_from_slice(&serialized_x);
-        result[(32 + 1)..].copy_from_slice(&serialized_y);
-        result
-    }
-
-    pub fn serialize_point_compressed_sec(point: &Point) -> [u8; 33] {
-        let point = point.to_affine();
-        let [x, y, _] = point.coordinates();
-        let serialized_x = Self::serialize_felt_be(x);
-
-        let mut result = [0u8; 1 + 32];
-        if y.representative().limbs[3] & 1 == 0 {
-            result[0] = 2
-        } else {
-            result[0] = 3
-        }
-        result[1..(1 + 32)].copy_from_slice(&serialized_x);
-        result
-    }
-
-    pub fn serialize_ecdsa_signature(signature: &ECDSASignature) -> Vec<u8> {
-        let serialized_r = U256DERSerializer::serialize(&signature.r.representative());
-        let serialized_s = U256DERSerializer::serialize(&signature.s.representative());
-        let signature_length = 2 + serialized_r.len() + serialized_s.len();
-        let mut result = Vec::with_capacity(signature_length);
-        result.push(0x30);
-        result.push(signature_length as u8);
-        result.push(2);
-        result.extend_from_slice(&serialized_r);
-        result.push(2);
-        result.extend_from_slice(&serialized_s);
-        result
-    }
-
     pub fn base58_encode_with_checksum(input: &[u8]) -> String {
         let mut input_with_checksum = Vec::with_capacity(input.len() + 32);
         input_with_checksum.extend_from_slice(input);
@@ -155,177 +109,12 @@ mod tests {
             curve::{Point, Secp256k1},
             fields::{BaseFelt, ScalarFelt},
         },
+        serializer::{public_key::FeltSerializer, CanSerialize},
         signature::ECDSASignature,
         transaction::{Command, Script},
     };
 
     use super::Serializer;
-
-    #[test]
-    fn test_serialize_base_felt_be() {
-        let base_felt = BaseFelt::from_hex_unchecked(
-            "42653bc665797082029f028451150bb340b35f2af1f4c52b0210fb91aea670c3",
-        );
-        let expected_bytes = [
-            66, 101, 59, 198, 101, 121, 112, 130, 2, 159, 2, 132, 81, 21, 11, 179, 64, 179, 95, 42,
-            241, 244, 197, 43, 2, 16, 251, 145, 174, 166, 112, 195,
-        ];
-        let serialized_base_felt = Serializer::serialize_felt_be(&base_felt);
-        assert_eq!(serialized_base_felt, expected_bytes);
-    }
-
-    #[test]
-    fn test_serialize_point_uncompressed_sec_1() {
-        let point = Secp256k1::generator();
-        let expected_bytes = [
-            4, 121, 190, 102, 126, 249, 220, 187, 172, 85, 160, 98, 149, 206, 135, 11, 7, 2, 155,
-            252, 219, 45, 206, 40, 217, 89, 242, 129, 91, 22, 248, 23, 152, 72, 58, 218, 119, 38,
-            163, 196, 101, 93, 164, 251, 252, 14, 17, 8, 168, 253, 23, 180, 72, 166, 133, 84, 25,
-            156, 71, 208, 143, 251, 16, 212, 184,
-        ];
-        let serialized_point = Serializer::serialize_point_uncompressed_sec(&point);
-        assert_eq!(serialized_point, expected_bytes);
-    }
-
-    #[test]
-    fn test_serialize_point_uncompressed_sec_2() {
-        let point = Secp256k1::generator().operate_with_self(5000u64);
-        let expected_bytes = [
-            4, 255, 229, 88, 227, 136, 133, 47, 1, 32, 228, 106, 242, 209, 179, 112, 248, 88, 84,
-            168, 235, 8, 65, 129, 30, 206, 14, 62, 3, 210, 130, 213, 124, 49, 93, 199, 40, 144,
-            164, 241, 10, 20, 129, 192, 49, 176, 59, 53, 27, 13, 199, 153, 1, 202, 24, 160, 12,
-            240, 9, 219, 219, 21, 122, 29, 16,
-        ];
-        let serialized_point = Serializer::serialize_point_uncompressed_sec(&point);
-        assert_eq!(serialized_point, expected_bytes);
-    }
-
-    #[test]
-    fn test_serialize_point_uncompressed_sec_3() {
-        let point = Secp256k1::generator().operate_with_self(33466154331649568u64);
-        let expected_bytes = [
-            4, 2, 127, 61, 161, 145, 132, 85, 224, 60, 70, 246, 89, 38, 106, 27, 181, 32, 78, 149,
-            157, 183, 54, 77, 47, 71, 59, 223, 143, 10, 19, 204, 157, 255, 135, 100, 127, 208, 35,
-            193, 59, 74, 73, 148, 241, 118, 145, 137, 88, 6, 225, 180, 11, 87, 244, 253, 34, 88,
-            26, 79, 70, 133, 31, 59, 6,
-        ];
-        let serialized_point = Serializer::serialize_point_uncompressed_sec(&point);
-        assert_eq!(serialized_point, expected_bytes);
-    }
-
-    #[test]
-    fn test_serialize_point_uncompressed_sec_4() {
-        let point = Secp256k1::generator().operate_with_self(0xdeadbeef12345u64);
-        let expected_bytes = [
-            4, 217, 12, 214, 37, 238, 135, 221, 56, 101, 109, 217, 92, 247, 159, 101, 246, 15, 114,
-            115, 182, 125, 48, 150, 230, 139, 216, 30, 79, 83, 66, 105, 31, 132, 46, 250, 118, 47,
-            213, 153, 97, 208, 233, 152, 3, 198, 30, 219, 168, 179, 227, 247, 220, 58, 52, 24, 54,
-            249, 119, 51, 174, 191, 152, 113, 33,
-        ];
-        let serialized_point = Serializer::serialize_point_uncompressed_sec(&point);
-        assert_eq!(serialized_point, expected_bytes);
-    }
-
-    #[test]
-    fn test_serialize_point_compressed_sec_generator() {
-        let point = Secp256k1::generator();
-        let expected_bytes = [
-            2, 121, 190, 102, 126, 249, 220, 187, 172, 85, 160, 98, 149, 206, 135, 11, 7, 2, 155,
-            252, 219, 45, 206, 40, 217, 89, 242, 129, 91, 22, 248, 23, 152,
-        ];
-        let serialized_point = Serializer::serialize_point_compressed_sec(&point);
-        assert_eq!(serialized_point, expected_bytes);
-    }
-
-    #[test]
-    fn test_serialize_point_compressed_sec_odd() {
-        let point = Point::from_affine(
-            BaseFelt::from_hex_unchecked(
-                "49fc4e631e3624a545de3f89f5d8684c7b8138bd94bdd531d2e213bf016b278a",
-            ),
-            BaseFelt::from_hex_unchecked(
-                "a56c896489c71dfc65701ce25050f542f336893fb8cd15f4e8e5c124dbf58e47",
-            ),
-        )
-        .unwrap();
-        let expected_bytes = [
-            3, 73, 252, 78, 99, 30, 54, 36, 165, 69, 222, 63, 137, 245, 216, 104, 76, 123, 129, 56,
-            189, 148, 189, 213, 49, 210, 226, 19, 191, 1, 107, 39, 138,
-        ];
-        let serialized_point = Serializer::serialize_point_compressed_sec(&point);
-        assert_eq!(serialized_point, expected_bytes);
-    }
-
-    #[test]
-    fn test_serialize_point_compressed_sec_even() {
-        let point = Point::from_affine(
-            BaseFelt::from_hex_unchecked(
-                "49fc4e631e3624a545de3f89f5d8684c7b8138bd94bdd531d2e213bf016b278a",
-            ),
-            BaseFelt::from_hex_unchecked(
-                "5a93769b7638e2039a8fe31dafaf0abd0cc976c04732ea0b171a3eda240a6de8",
-            ),
-        )
-        .unwrap();
-        let expected_bytes = [
-            2, 73, 252, 78, 99, 30, 54, 36, 165, 69, 222, 63, 137, 245, 216, 104, 76, 123, 129, 56,
-            189, 148, 189, 213, 49, 210, 226, 19, 191, 1, 107, 39, 138,
-        ];
-        let serialized_point = Serializer::serialize_point_compressed_sec(&point);
-        assert_eq!(serialized_point, expected_bytes);
-    }
-
-    #[test]
-    fn test_serialize_point_compressed_sec_1() {
-        let point = Secp256k1::generator().operate_with_self(5001u64);
-        let expected_bytes = [
-            3, 87, 164, 243, 104, 134, 138, 138, 109, 87, 41, 145, 228, 132, 230, 100, 129, 15,
-            241, 76, 5, 192, 250, 2, 50, 117, 37, 17, 81, 254, 14, 83, 209,
-        ];
-        let serialized_point = Serializer::serialize_point_compressed_sec(&point);
-        assert_eq!(serialized_point, expected_bytes);
-    }
-
-    #[test]
-    fn test_serialize_point_compressed_sec_2() {
-        let point = Secp256k1::generator().operate_with_self(33549155665686099u64);
-        let expected_bytes = [
-            2, 147, 62, 194, 210, 177, 17, 185, 39, 55, 236, 18, 241, 197, 210, 15, 50, 51, 160,
-            173, 33, 205, 139, 54, 208, 188, 167, 160, 207, 165, 203, 135, 1,
-        ];
-        let serialized_point = Serializer::serialize_point_compressed_sec(&point);
-        assert_eq!(serialized_point, expected_bytes);
-    }
-
-    #[test]
-    fn test_serialize_point_compressed_sec_3() {
-        let point = Secp256k1::generator().operate_with_self(0xdeadbeef54321u64);
-        let expected_bytes = [
-            2, 150, 190, 91, 18, 146, 246, 200, 86, 179, 197, 101, 78, 136, 111, 193, 53, 17, 70,
-            32, 89, 8, 156, 223, 156, 71, 150, 35, 191, 203, 231, 118, 144,
-        ];
-        let serialized_point = Serializer::serialize_point_compressed_sec(&point);
-        assert_eq!(serialized_point, expected_bytes);
-    }
-
-    #[test]
-    fn test_serialize_ecdsa_signature() {
-        let r = ScalarFelt::from_hex_unchecked(
-            "37206a0610995c58074999cb9767b87af4c4978db68c06e8e6e81d282047a7c6",
-        );
-        let s = ScalarFelt::from_hex_unchecked(
-            "8ca63759c1157ebeaec0d03cecca119fc9a75bf8e6d0fa65c841c8e2738cdaec",
-        );
-        let signature = ECDSASignature::new(r, s);
-        let expected_bytes = vec![
-            48, 69, 2, 32, 55, 32, 106, 6, 16, 153, 92, 88, 7, 73, 153, 203, 151, 103, 184, 122,
-            244, 196, 151, 141, 182, 140, 6, 232, 230, 232, 29, 40, 32, 71, 167, 198, 2, 33, 0,
-            140, 166, 55, 89, 193, 21, 126, 190, 174, 192, 208, 60, 236, 202, 17, 159, 201, 167,
-            91, 248, 230, 208, 250, 101, 200, 65, 200, 226, 115, 140, 218, 236,
-        ];
-        let serialized_signature = Serializer::serialize_ecdsa_signature(&signature);
-        assert_eq!(serialized_signature, expected_bytes);
-    }
 
     #[test]
     fn test_base58_encoding_1() {

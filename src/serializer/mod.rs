@@ -2,7 +2,11 @@ pub mod deserializer;
 pub mod serializer;
 mod u256;
 mod u64;
+mod public_key;
+mod signature;
 
+pub(crate) use self::public_key::PublicKeyCompressedSerializer;
+pub(crate) use self::public_key::PublicKeyUncompressedSerializer;
 pub(crate) use self::u256::U256BigEndianSerializer;
 pub(crate) use self::u256::U256DERSerializer;
 pub(crate) use self::u64::VarIntSerializer;

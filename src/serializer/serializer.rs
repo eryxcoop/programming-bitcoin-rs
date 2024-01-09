@@ -13,29 +13,11 @@ use crate::{
     transaction::{Command, Script},
 };
 
-use super::{CanSerialize, SerializerError, U256BigEndianSerializer, VarIntSerializer};
+use super::{CanSerialize, SerializerError, U256BigEndianSerializer, VarIntSerializer, U256DERSerializer};
 
 pub(crate) struct Serializer;
 
 impl Serializer {
-    pub fn serialize_u256_element_der_format(element: &U256) -> Vec<u8> {
-        let mut serialized: Vec<u8> = U256BigEndianSerializer::serialize(element)
-            .into_iter()
-            .skip_while(|&byte| byte == 0)
-            .collect();
-
-        if serialized.first().map_or(false, |&byte| byte > 0x80) {
-            serialized.insert(0, 0x00);
-        }
-
-        let len = serialized.len();
-        let mut result = Vec::with_capacity(len + 1);
-        result.push(len as u8);
-        result.extend(serialized);
-
-        result
-    }
-
     pub fn serialize_felt_be<M>(element: &FieldElement<U256PrimeField<M>>) -> [u8; 32]
     where
         M: IsModulus<U256> + Clone,
@@ -72,8 +54,8 @@ impl Serializer {
     }
 
     pub fn serialize_ecdsa_signature(signature: &ECDSASignature) -> Vec<u8> {
-        let serialized_r = Self::serialize_u256_element_der_format(&signature.r.representative());
-        let serialized_s = Self::serialize_u256_element_der_format(&signature.s.representative());
+        let serialized_r = U256DERSerializer::serialize(&signature.r.representative());
+        let serialized_s = U256DERSerializer::serialize(&signature.s.representative());
         let signature_length = 2 + serialized_r.len() + serialized_s.len();
         let mut result = Vec::with_capacity(signature_length);
         result.push(0x30);
@@ -343,18 +325,6 @@ mod tests {
         ];
         let serialized_signature = Serializer::serialize_ecdsa_signature(&signature);
         assert_eq!(serialized_signature, expected_bytes);
-    }
-
-    #[test]
-    fn test_serialize_u256_element_der_format() {
-        let element =
-            U256::from_hex_unchecked("05c63fdc786d6a6b904080b58f72edb08da1cf2d309539336a");
-        let expected_bytes = [
-            25, 5, 198, 63, 220, 120, 109, 106, 107, 144, 64, 128, 181, 143, 114, 237, 176, 141,
-            161, 207, 45, 48, 149, 57, 51, 106,
-        ];
-        let serialized_element = Serializer::serialize_u256_element_der_format(&element);
-        assert_eq!(serialized_element, expected_bytes);
     }
 
     #[test]

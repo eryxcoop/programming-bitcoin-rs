@@ -4,6 +4,7 @@ mod u256;
 mod u64;
 
 pub(crate) use self::u256::U256BigEndianSerializer;
+pub(crate) use self::u256::U256DERSerializer;
 pub(crate) use self::u64::VarIntSerializer;
 
 #[derive(Debug, PartialEq, Eq)]

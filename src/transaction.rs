@@ -16,6 +16,26 @@ pub enum ScriptError {
     InvalidCommandsError,
 }
 
+pub(crate) struct Transaction {
+    version: u32,
+    inputs: Vec<Input>,
+    outputs: Vec<Output>,
+    locktime: u32,
+}
+
+#[derive(Debug, PartialEq, Eq)]
+pub(crate) struct Input {
+    source_id: TransactionId,
+    source_index: u32,
+    script_sig: Script,
+    sequence: u32,
+}
+
+pub(crate) struct Output {
+    amount: u64,
+    script_pubkey: Script,
+}
+
 impl Script {
     pub fn new(commands: Vec<Command>) -> Result<Self, ScriptError> {
         if commands.iter().fold(true, |acc, command| {
@@ -39,29 +59,19 @@ impl Script {
     }
 }
 
-pub(crate) struct Transaction {
-    version: u32,
-    inputs: Vec<Input>,
-    outputs: Vec<Output>,
-    locktime: u32,
-}
-
-pub(crate) struct Input {
-    source_id: TransactionId,
-    source_index: usize,
-    script_sig: Script,
-    sequence: usize,
-}
-
-pub(crate) struct Output {
-    amount: u64,
-    script_pubkey: Script,
+impl Input {
+    pub fn new(source_id: [u8; 32], source_index: u32, script_sig: Script, sequence: u32) -> Self {
+        Self {
+            source_id,
+            source_index,
+            script_sig,
+            sequence,
+        }
+    }
 }
 
 #[cfg(test)]
 mod test {
-    use crate::transaction::ScriptError;
-
     use super::{Command, Script};
 
     #[test]

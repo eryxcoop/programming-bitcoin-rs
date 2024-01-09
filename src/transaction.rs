@@ -39,9 +39,9 @@ pub(crate) struct Output {
 impl Script {
     pub fn new(commands: Vec<Command>) -> Result<Self, ScriptError> {
         if commands.iter().all(|command| match command {
-                Command::Operation(value) => *value > 77,
-                Command::Element(value) => value.len() < 0x10000,
-            }) {
+            Command::Operation(value) => *value > 77,
+            Command::Element(value) => value.len() < 0x10000,
+        }) {
             Ok(Self { commands })
         } else {
             Err(ScriptError::InvalidCommandsError)

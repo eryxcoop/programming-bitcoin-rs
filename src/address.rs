@@ -1,6 +1,6 @@
 use crate::{
     hash::{hash160, hash256},
-    serializer::{serializer::Serializer, CanSerialize, PublicKeyUncompressedSerializer, PublicKeyCompressedSerializer},
+    serializer::{CanSerialize, PublicKeyCompressedSerializer, PublicKeyUncompressedSerializer},
     signature::PublicKey,
 };
 

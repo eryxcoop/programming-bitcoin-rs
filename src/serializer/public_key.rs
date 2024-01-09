@@ -79,9 +79,23 @@ impl CanSerialize<PublicKey> for PublicKeyUncompressedSerializer {
 
 #[cfg(test)]
 mod tests {
-    use lambdaworks_math::{elliptic_curve::traits::{IsEllipticCurve, FromAffine}, cyclic_group::IsGroup};
+    use lambdaworks_math::{
+        cyclic_group::IsGroup,
+        elliptic_curve::traits::{FromAffine, IsEllipticCurve},
+    };
 
-    use crate::{secp256k1::{fields::BaseFelt, curve::{Secp256k1, Point}}, serializer::{public_key::{FeltSerializer, PublicKeyUncompressedSerializer, PublicKeyCompressedSerializer}, CanSerialize}};
+    use crate::{
+        secp256k1::{
+            curve::{Point, Secp256k1},
+            fields::BaseFelt,
+        },
+        serializer::{
+            public_key::{
+                FeltSerializer, PublicKeyCompressedSerializer, PublicKeyUncompressedSerializer,
+            },
+            CanSerialize,
+        },
+    };
 
     #[test]
     fn test_serialize_base_felt_be() {

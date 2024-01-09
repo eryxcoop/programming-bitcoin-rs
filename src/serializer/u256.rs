@@ -54,8 +54,7 @@ impl CanSerialize<U256> for U256DERSerializer {
 mod tests {
     use lambdaworks_math::unsigned_integer::element::U256;
 
-    use crate::serializer::{U256DERSerializer, CanSerialize};
-
+    use crate::serializer::{CanSerialize, U256DERSerializer};
 
     #[test]
     fn test_serialize_u256_element_der_format() {

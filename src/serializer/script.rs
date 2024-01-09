@@ -61,7 +61,10 @@ impl CanSerialize<Script> for ScriptSerializer {
 
 #[cfg(test)]
 mod tests {
-    use crate::{transaction::{Script, Command}, serializer::{script::ScriptSerializer, CanSerialize}};
+    use crate::{
+        serializer::{script::ScriptSerializer, CanSerialize},
+        transaction::{Command, Script},
+    };
 
     #[test]
     fn test_serialize_script_1() {

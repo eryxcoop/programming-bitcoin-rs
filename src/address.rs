@@ -28,11 +28,11 @@ impl Address {
     }
 
     fn from_public_key_compressed(key: &PublicKey, chain: Chain) -> Self {
-        Self::from_serialized_key(&Serializer::serialize_point_compressed_sec(&key), chain)
+        Self::from_serialized_key(&Serializer::serialize_point_compressed_sec(key), chain)
     }
 
     fn from_public_key_uncompressed(key: &PublicKey, chain: Chain) -> Self {
-        Self::from_serialized_key(&Serializer::serialize_point_uncompressed_sec(&key), chain)
+        Self::from_serialized_key(&Serializer::serialize_point_uncompressed_sec(key), chain)
     }
 }
 

@@ -151,17 +151,17 @@ impl Serializer {
                 let length = element_bytes.len();
                 if length <= 75 {
                     let mut result = vec![length as u8];
-                    result.extend_from_slice(&element_bytes);
+                    result.extend_from_slice(element_bytes);
                     result
                 } else if 75 < length && length < 0x100 {
                     let mut result = vec![76, length as u8];
-                    result.extend_from_slice(&element_bytes);
+                    result.extend_from_slice(element_bytes);
                     result
-                } else if 0x100 <= length && length < 0x10000 {
+                } else if (0x100..0x10000).contains(&length) {
                     let length_as_bytes = &length.to_le_bytes()[..2];
                     let mut result = vec![77];
                     result.extend_from_slice(length_as_bytes);
-                    result.extend_from_slice(&element_bytes);
+                    result.extend_from_slice(element_bytes);
                     result
                 } else {
                     // Code unreachable given Script's invariants
@@ -175,7 +175,7 @@ impl Serializer {
         let serialized_script: Vec<u8> = script
             .commands()
             .iter()
-            .flat_map(|command| Self::serialize_command(command))
+            .flat_map(Self::serialize_command)
             .collect();
         let mut result = Self::serialize_u64_varint(serialized_script.len() as u64);
         result.extend_from_slice(&serialized_script);

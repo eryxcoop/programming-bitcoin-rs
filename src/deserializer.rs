@@ -29,7 +29,7 @@ impl Deserializer {
     }
 
     pub fn parse_varint(bytes: &[u8]) -> Result<(u64, usize), DeserializerError> {
-        match bytes.get(0) {
+        match bytes.first() {
             Some(&flag) if flag < 253 => Ok((flag as u64, 1)),
             Some(&253) => {
                 let int_bytes = Self::read_bytes::<2>(&bytes[1..])?;
@@ -62,7 +62,7 @@ impl Deserializer {
         Ok((input, 32 + 4 + script_length + 4))
     }
 
-    pub fn parse_output(bytes: &[u8]) -> Result<(Output, usize), DeserializerError> {
+    pub fn parse_output(_bytes: &[u8]) -> Result<(Output, usize), DeserializerError> {
         todo!()
     }
 

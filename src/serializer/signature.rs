@@ -1,4 +1,4 @@
-use crate::signature::{self, ECDSASignature};
+use crate::signature::ECDSASignature;
 
 use super::{CanSerialize, U256DERSerializer};
 
@@ -19,10 +19,6 @@ impl CanSerialize<ECDSASignature> for ECDSASignatureSerializer {
         result.push(2);
         result.extend_from_slice(&serialized_s);
         result
-    }
-
-    fn parse(object: &[u8]) -> Result<(ECDSASignature, usize), super::ParserError> {
-        todo!()
     }
 }
 

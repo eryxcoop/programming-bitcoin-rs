@@ -7,7 +7,7 @@ mod u64;
 
 pub(crate) use self::public_key::PublicKeyCompressedSerializer;
 pub(crate) use self::public_key::PublicKeyUncompressedSerializer;
-pub(crate) use self::signature::ECDSASignatureSerializer;
+
 pub(crate) use self::u256::U256BigEndianSerializer;
 pub(crate) use self::u256::U256DERSerializer;
 pub(crate) use self::u64::VarIntSerializer;
@@ -33,5 +33,8 @@ pub(crate) fn read_bytes<const N: usize>(bytes: &[u8]) -> Result<[u8; N], Parser
 pub(crate) trait CanSerialize<T> {
     type Output: AsRef<[u8]>;
     fn serialize(object: &T) -> Self::Output;
+}
+
+pub(crate) trait CanParse<T> {
     fn parse(object: &[u8]) -> Result<(T, usize), ParserError>;
 }

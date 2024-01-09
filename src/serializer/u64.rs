@@ -1,4 +1,4 @@
-use super::{read_bytes, CanSerialize, ParserError};
+use super::{read_bytes, CanParse, CanSerialize, ParserError};
 
 pub(crate) struct VarIntSerializer;
 
@@ -19,7 +19,8 @@ impl CanSerialize<u64> for VarIntSerializer {
             ]
         }
     }
-
+}
+impl CanParse<u64> for VarIntSerializer {
     fn parse(bytes: &[u8]) -> Result<(u64, usize), super::ParserError> {
         match bytes.first() {
             Some(&flag) if flag < 253 => Ok((flag as u64, 1)),
@@ -42,7 +43,7 @@ impl CanSerialize<u64> for VarIntSerializer {
 
 #[cfg(test)]
 mod test {
-    use crate::serializer::{CanSerialize, VarIntSerializer};
+    use crate::serializer::{CanParse, CanSerialize, VarIntSerializer};
     #[test]
     fn test_serialize_varint_1() {
         let uint = 1u64;

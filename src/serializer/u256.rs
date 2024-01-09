@@ -18,10 +18,6 @@ impl CanSerialize<U256> for U256BigEndianSerializer {
         }
         result
     }
-
-    fn parse(object: &[u8]) -> Result<(U256, usize), super::ParserError> {
-        todo!()
-    }
 }
 
 impl CanSerialize<U256> for U256DERSerializer {
@@ -43,10 +39,6 @@ impl CanSerialize<U256> for U256DERSerializer {
         result.extend(serialized);
 
         result
-    }
-
-    fn parse(object: &[u8]) -> Result<(U256, usize), super::ParserError> {
-        todo!()
     }
 }
 

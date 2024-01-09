@@ -25,12 +25,6 @@ where
     fn serialize(element: &FieldElement<MontgomeryBackendPrimeField<M, 4>>) -> Self::Output {
         U256BigEndianSerializer::serialize(&element.representative())
     }
-
-    fn parse(
-        object: &[u8],
-    ) -> Result<(FieldElement<MontgomeryBackendPrimeField<M, 4>>, usize), super::ParserError> {
-        todo!()
-    }
 }
 
 impl CanSerialize<PublicKey> for PublicKeyCompressedSerializer {
@@ -50,10 +44,6 @@ impl CanSerialize<PublicKey> for PublicKeyCompressedSerializer {
         result[1..(1 + 32)].copy_from_slice(&serialized_x);
         result
     }
-
-    fn parse(object: &[u8]) -> Result<(PublicKey, usize), super::ParserError> {
-        todo!()
-    }
 }
 
 impl CanSerialize<PublicKey> for PublicKeyUncompressedSerializer {
@@ -70,10 +60,6 @@ impl CanSerialize<PublicKey> for PublicKeyUncompressedSerializer {
         result[1..(32 + 1)].copy_from_slice(&serialized_x);
         result[(32 + 1)..].copy_from_slice(&serialized_y);
         result
-    }
-
-    fn parse(object: &[u8]) -> Result<(PublicKey, usize), super::ParserError> {
-        todo!()
     }
 }
 

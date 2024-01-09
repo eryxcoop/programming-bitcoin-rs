@@ -1,6 +1,6 @@
 use crate::transaction::{Command, Input, Output, Script};
 
-use super::{read_bytes, CanSerialize, ParserError, VarIntSerializer};
+use super::{read_bytes, CanParse, ParserError, VarIntSerializer};
 
 pub(crate) struct Deserializer;
 

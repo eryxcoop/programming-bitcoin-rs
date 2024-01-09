@@ -34,10 +34,6 @@ impl CanSerialize<Command> for CommandSerializer {
             }
         }
     }
-
-    fn parse(object: &[u8]) -> Result<(Command, usize), super::ParserError> {
-        todo!()
-    }
 }
 
 impl CanSerialize<Script> for ScriptSerializer {
@@ -52,10 +48,6 @@ impl CanSerialize<Script> for ScriptSerializer {
         let mut result = VarIntSerializer::serialize(&(serialized_script.len() as u64));
         result.extend_from_slice(&serialized_script);
         result
-    }
-
-    fn parse(object: &[u8]) -> Result<(Script, usize), super::ParserError> {
-        todo!()
     }
 }
 

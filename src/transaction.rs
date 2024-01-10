@@ -16,6 +16,7 @@ pub enum ScriptError {
     InvalidCommandsError,
 }
 
+#[derive(Debug, PartialEq, Eq)]
 pub(crate) struct Transaction {
     version: u32,
     inputs: Vec<Input>,
@@ -31,6 +32,7 @@ pub(crate) struct Input {
     sequence: u32,
 }
 
+#[derive(Debug, PartialEq, Eq)]
 pub(crate) struct Output {
     amount: u64,
     script_pubkey: Script,
@@ -64,6 +66,26 @@ impl Input {
             source_index,
             script_sig,
             sequence,
+        }
+    }
+}
+
+impl Output {
+    pub fn new(amount: u64, script_pubkey: Script) -> Self {
+        Self {
+            amount,
+            script_pubkey,
+        }
+    }
+}
+
+impl Transaction {
+    pub fn new(version: u32, inputs: Vec<Input>, outputs: Vec<Output>, locktime: u32) -> Self {
+        Self {
+            version,
+            inputs,
+            outputs,
+            locktime,
         }
     }
 }

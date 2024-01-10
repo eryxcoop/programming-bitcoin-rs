@@ -1,11 +1,11 @@
-use std::string::ParseError;
+
 
 use crate::{
     serializer::VarIntSerializer,
     transaction::{Input, Output, Transaction},
 };
 
-use super::{read_bytes, CanParse, CanSerialize, ParserError, ScriptSerializer};
+use super::{read_bytes, CanParse, ParserError, ScriptSerializer};
 
 pub(crate) struct TransactionSerializer;
 
@@ -25,7 +25,7 @@ impl TransactionSerializer {
     }
 
     fn parse_output(bytes: &[u8]) -> Result<(Output, usize), ParserError> {
-        let amount_bytes = read_bytes::<8>(&bytes).map_err(|_| ParserError::ParseError)?;
+        let amount_bytes = read_bytes::<8>(bytes).map_err(|_| ParserError::ParseError)?;
         let amount = u64::from_le_bytes(amount_bytes);
         let (script_pubkey, script_length) = ScriptSerializer::parse(&bytes[8..])?;
         Ok((Output::new(amount, script_pubkey), 8 + script_length))
@@ -48,7 +48,7 @@ impl CanParse<Transaction> for TransactionSerializer {
             offset += input_length;
         }
 
-        let (number_outputs, num_outputs_length) = VarIntSerializer::parse(&bytes[offset..])?;
+        let (number_outputs, _num_outputs_length) = VarIntSerializer::parse(&bytes[offset..])?;
         offset += num_inputs_length;
         let mut outputs = Vec::new();
         for _ in 0..number_outputs {

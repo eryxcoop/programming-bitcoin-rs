@@ -2,13 +2,11 @@ use crate::transaction::{Command, Script};
 
 use super::{CanParse, CanSerialize, VarIntSerializer, ParserError, read_bytes};
 
-pub(crate) struct CommandSerializer;
 pub(crate) struct ScriptSerializer;
 
-impl CanSerialize<Command> for CommandSerializer {
-    type Output = Vec<u8>;
 
-    fn serialize(command: &Command) -> Self::Output {
+impl ScriptSerializer {
+    fn serialize_command(command: &Command) -> Vec<u8> {
         match command {
             Command::Operation(value) => vec![*value],
             Command::Element(element_bytes) => {
@@ -43,7 +41,7 @@ impl CanSerialize<Script> for ScriptSerializer {
         let serialized_script: Vec<u8> = script
             .commands()
             .iter()
-            .flat_map(CommandSerializer::serialize)
+            .flat_map(Self::serialize_command)
             .collect();
         let mut result = VarIntSerializer::serialize(&(serialized_script.len() as u64));
         result.extend_from_slice(&serialized_script);

@@ -18,24 +18,24 @@ pub enum ScriptError {
 
 #[derive(Debug, PartialEq, Eq)]
 pub(crate) struct Transaction {
-    version: u32,
-    inputs: Vec<Input>,
-    outputs: Vec<Output>,
-    locktime: u32,
+    pub(crate) version: u32,
+    pub(crate) inputs: Vec<Input>,
+    pub(crate) outputs: Vec<Output>,
+    pub(crate) locktime: u32,
 }
 
 #[derive(Debug, PartialEq, Eq)]
 pub(crate) struct Input {
-    source_id: TransactionId,
-    source_index: u32,
-    script_sig: Script,
-    sequence: u32,
+    pub(crate) source_id: TransactionId,
+    pub(crate) source_index: u32,
+    pub(crate) script_sig: Script,
+    pub(crate) sequence: u32,
 }
 
 #[derive(Debug, PartialEq, Eq)]
 pub(crate) struct Output {
-    amount: u64,
-    script_pubkey: Script,
+    pub(crate) amount: u64,
+    pub(crate) script_pubkey: Script,
 }
 
 impl Script {

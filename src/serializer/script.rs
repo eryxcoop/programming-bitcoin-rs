@@ -1,9 +1,8 @@
 use crate::transaction::{Command, Script};
 
-use super::{CanParse, CanSerialize, VarIntSerializer, ParserError, read_bytes};
+use super::{read_bytes, CanParse, CanSerialize, ParserError, VarIntSerializer};
 
 pub(crate) struct ScriptSerializer;
-
 
 impl ScriptSerializer {
     fn serialize_command(command: &Command) -> Vec<u8> {
@@ -104,7 +103,7 @@ impl CanParse<Script> for ScriptSerializer {
 #[cfg(test)]
 mod tests {
     use crate::{
-        serializer::{script::ScriptSerializer, CanSerialize, CanParse},
+        serializer::{script::ScriptSerializer, CanParse, CanSerialize},
         transaction::{Command, Script},
     };
 
@@ -394,5 +393,4 @@ mod tests {
         assert_eq!(script, expected_script);
         assert_eq!(length, 657)
     }
-
 }

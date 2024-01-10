@@ -325,7 +325,6 @@ mod tests {
         assert_eq!(bytes, expected_bytes);
     }
 
-
     #[test]
     fn test_parse_output2() {
         let bytes = [

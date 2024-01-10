@@ -1,15 +1,11 @@
-mod transaction;
 mod public_key;
 mod script;
 mod signature;
+mod transaction;
 mod u256;
 mod u64;
 
-
-
 pub(crate) use self::script::ScriptSerializer;
-
-
 
 pub(crate) use self::public_key::PublicKeyCompressedSerializer;
 pub(crate) use self::public_key::PublicKeyUncompressedSerializer;

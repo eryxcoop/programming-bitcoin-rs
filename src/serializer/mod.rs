@@ -6,6 +6,8 @@ mod signature;
 mod u256;
 mod u64;
 
+pub(crate) use self::transaction::TransactionSerializer;
+
 pub(crate) use self::script::ScriptSerializer;
 
 pub(crate) use self::signature::ECDSASignatureSerializer;

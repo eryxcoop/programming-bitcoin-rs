@@ -1,5 +1,3 @@
-
-
 use crate::{
     serializer::VarIntSerializer,
     transaction::{Input, Output, Transaction},
@@ -155,6 +153,58 @@ mod tests {
         let (input, length) = TransactionSerializer::parse_input(&bytes).unwrap();
         assert_eq!(input, expected_input);
         assert_eq!(length, 112);
+    }
+
+    #[test]
+    fn test_parse_output1() {
+        let bytes = [
+            0, 90, 98, 2, 0, 0, 0, 0, 25, 118, 169, 20, 60, 130, 215, 223, 54, 78, 182, 199, 91,
+            232, 200, 13, 242, 179, 237, 168, 219, 87, 57, 112, 136, 172,
+        ];
+        let expected_output = Output::new(
+            40000000,
+            Script::new(vec![
+                Command::Operation(118),
+                Command::Operation(169),
+                Command::Element(vec![
+                    60, 130, 215, 223, 54, 78, 182, 199, 91, 232, 200, 13, 242, 179, 237, 168, 219,
+                    87, 57, 112,
+                ]),
+                Command::Operation(136),
+                Command::Operation(172),
+            ])
+            .unwrap(),
+        );
+
+        let (output, _) = TransactionSerializer::parse_output(&bytes).unwrap();
+        assert_eq!(output, expected_output);
+    }
+
+    #[test]
+    fn test_parse_output2() {
+        let bytes = [
+            81, 67, 15, 0, 0, 0, 0, 0, 25, 118, 169, 20, 171, 12, 11, 46, 152, 177, 171, 109, 191,
+            103, 212, 117, 11, 10, 86, 36, 73, 72, 168, 121, 136, 172, 0, 90, 98, 2, 0, 0, 0, 0,
+            25, 118, 169, 20, 60, 130, 215, 223, 54, 78, 182, 199, 91, 232, 200, 13, 242, 179, 237,
+            168, 219, 87, 57, 112, 136, 172, 70, 67, 6, 0,
+        ];
+        let expected_output = Output::new(
+            1000273,
+            Script::new(vec![
+                Command::Operation(118),
+                Command::Operation(169),
+                Command::Element(vec![
+                    171, 12, 11, 46, 152, 177, 171, 109, 191, 103, 212, 117, 11, 10, 86, 36, 73,
+                    72, 168, 121,
+                ]),
+                Command::Operation(136),
+                Command::Operation(172),
+            ])
+            .unwrap(),
+        );
+
+        let (output, _) = TransactionSerializer::parse_output(&bytes).unwrap();
+        assert_eq!(output, expected_output);
     }
 
     #[test]

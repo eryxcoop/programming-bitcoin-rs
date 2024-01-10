@@ -1,4 +1,3 @@
-pub mod deserializer;
 mod transaction;
 mod public_key;
 mod script;

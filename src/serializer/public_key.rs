@@ -12,9 +12,9 @@ use super::{CanSerialize, U256BigEndianSerializer};
 
 pub(crate) struct FeltSerializer;
 
-pub(crate) struct PublicKeyCompressedSerializer;
+pub struct PublicKeyCompressedSerializer;
 
-pub(crate) struct PublicKeyUncompressedSerializer;
+pub struct PublicKeyUncompressedSerializer;
 
 impl<M> CanSerialize<FieldElement<MontgomeryBackendPrimeField<M, 4>>> for FeltSerializer
 where

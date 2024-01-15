@@ -27,7 +27,6 @@ pub(crate) struct ECDSASignature {
 pub(crate) type PrivateKey = [u8; 32];
 pub(crate) type PublicKey = ShortWeierstrassProjectivePoint<Secp256k1>;
 
-pub(crate) struct RandomScalarGenerator;
 
 impl ECDSASignature {
     pub(crate) fn new(r: ScalarFelt, s: ScalarFelt) -> Self {

@@ -1,7 +1,14 @@
+use lambdaworks_math::{cyclic_group::IsGroup, elliptic_curve::traits::IsEllipticCurve};
+
 use crate::{
     hash::{hash160, hash256},
-    serializer::{CanSerialize, PublicKeyCompressedSerializer, PublicKeyUncompressedSerializer},
-    signature::PublicKey,
+    random::{IsRandomScalarGenerator, RandomScalarGenerator},
+    secp256k1::curve::Secp256k1,
+    serializer::{
+        CanSerialize, PublicKeyCompressedSerializer, PublicKeyUncompressedSerializer,
+        U256BigEndianSerializer,
+    },
+    signature::{PrivateKey, PublicKey},
 };
 
 pub(crate) enum Chain {
@@ -22,6 +29,15 @@ impl Chain {
 }
 
 impl Address {
+    fn new_random_testnet() -> (Self, PublicKey, PrivateKey) {
+        let mut rng = RandomScalarGenerator::new();
+        let private_key_u256 = rng.random_scalar().representative();
+        let private_key = U256BigEndianSerializer::serialize(&private_key_u256);
+        let public_key = Secp256k1::generator().operate_with_self(private_key_u256);
+        let address = Self::from_public_key_uncompressed(&public_key, Chain::TestNet);
+        (address, public_key, private_key)
+    }
+
     fn from_serialized_key(data: &[u8], chain: Chain) -> Self {
         let hash = {
             let mut hash = vec![chain.code()];
@@ -78,7 +94,10 @@ impl Address {
 
 #[cfg(test)]
 mod tests {
-    use lambdaworks_math::{cyclic_group::IsGroup, elliptic_curve::traits::IsEllipticCurve};
+    use lambdaworks_math::{
+        cyclic_group::IsGroup, elliptic_curve::traits::IsEllipticCurve,
+        unsigned_integer::element::U256,
+    };
 
     use crate::secp256k1::curve::Secp256k1;
 
@@ -139,5 +158,17 @@ mod tests {
         let expected_string = "EQJsjkd6JaGwxrjEhfeqPenqHwrBmPQZjJGNSCHBkcF7".to_string();
         let base58_encoded = Address::base58_encode(&bytes);
         assert_eq!(base58_encoded, expected_string);
+    }
+
+    #[test]
+    fn test_new_address_from_compressed() {
+        let private_key_u256 = U256::from_hex_unchecked(
+            "18e14a7b6a307f426a94f8114701e7c8e774e7f9a47e2c2035db29a206321725",
+        );
+        let expected_address = Address("1PMycacnJaSqwwJqjawXBErnLsZ7RkXUAs".to_string());
+        let public_key = Secp256k1::generator().operate_with_self(private_key_u256);
+        let address = Address::from_public_key_compressed(&public_key, Chain::MainNet);
+
+        assert_eq!(address, expected_address);
     }
 }

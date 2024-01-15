@@ -90,6 +90,49 @@ impl Address {
 
         String::from_utf8(result).unwrap()
     }
+
+    fn bech32_polymod(bytes: &[u8]) -> u32 {
+        let mut c = 1u32;
+        for v_i in bytes.iter() {
+            let c0 = (c >> 25) as u8;
+            c = ((c & 0x1ffffff) << 5) ^ (*v_i as u32);
+            if c0 & 1 == 1 {
+                //     k(x) = {29}x^5 + {22}x^4 + {20}x^3 + {21}x^2 + {29}x + {18}
+                c ^= 0x3b6a57b2
+            };
+            if c0 & 2 == 1 {
+                //  {2}k(x) = {19}x^5 +  {5}x^4 +     x^3 +  {3}x^2 + {19}x + {13}
+                c ^= 0x26508e6d
+            };
+            if c0 & 4 == 1 {
+                //  {4}k(x) = {15}x^5 + {10}x^4 +  {2}x^3 +  {6}x^2 + {15}x + {26}
+                c ^= 0x1ea119fa
+            };
+            if c0 & 8 == 1 {
+                //  {8}k(x) = {30}x^5 + {20}x^4 +  {4}x^3 + {12}x^2 + {30}x + {29}
+                c ^= 0x3d4233dd
+            };
+            if c0 & 16 == 1 {
+                // {16}k(x) = {21}x^5 +     x^4 +  {8}x^3 + {24}x^2 + {21}x + {19}
+                c ^= 0x2a1462b3
+            };
+        }
+        c
+    }
+
+    fn expand_human_readable_part(bytes: [u8; 2]) -> Vec<u8> {
+        let mut result = vec![0u8; 5];
+        let c = bytes[0];
+        result[0] = c >> 5;
+        result[3] = c & 0x1f;
+
+        let c = bytes[1];
+        result[1] = c >> 5;
+        result[4] = c & 0x1f;
+
+        result[2] = 0;
+        result
+    }
 }
 
 #[cfg(test)]
@@ -160,6 +203,7 @@ mod tests {
         assert_eq!(base58_encoded, expected_string);
     }
 
+    /// https://en.bitcoin.it/wiki/Technical_background_of_version_1_Bitcoin_addresses
     #[test]
     fn test_new_address_from_compressed() {
         let private_key_u256 = U256::from_hex_unchecked(
@@ -170,5 +214,20 @@ mod tests {
         let address = Address::from_public_key_compressed(&public_key, Chain::MainNet);
 
         assert_eq!(address, expected_address);
+    }
+
+    #[test]
+    fn test_expand_hrp() {
+        // testnet. The hrp is "tb"
+        let expected_for_testnet = [3, 3, 0, 20, 2];
+        let result_testnet =
+            Address::expand_human_readable_part("tb".as_bytes().try_into().unwrap());
+        assert_eq!(result_testnet, expected_for_testnet);
+
+        // mainnet. The hrp is "bc"
+        let expected_for_mainnet = [3, 3, 0, 2, 3];
+        let result_mainnet =
+            Address::expand_human_readable_part("bc".as_bytes().try_into().unwrap());
+        assert_eq!(result_mainnet, expected_for_mainnet);
     }
 }

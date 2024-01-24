@@ -8,7 +8,7 @@ use rand::Rng;
 pub(crate) struct RandomScalarGenerator;
 
 impl RandomScalarGenerator {
-    pub(crate) fn new() ->  Self {
+    pub(crate) fn new() -> Self {
         Self {}
     }
 }

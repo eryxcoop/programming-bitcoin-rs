@@ -11,6 +11,7 @@ use crate::{
     signature::{PrivateKey, PublicKey},
 };
 
+#[derive(Clone)]
 pub(crate) enum Chain {
     TestNet,
     MainNet,
@@ -24,6 +25,13 @@ impl Chain {
         match self {
             Chain::TestNet => 0x6f,
             Chain::MainNet => 0x00,
+        }
+    }
+
+    fn hrp(self) -> [u8; 2] {
+        match self {
+            Chain::TestNet => b"tb".to_owned(),
+            Chain::MainNet => b"bc".to_owned(),
         }
     }
 }
@@ -98,23 +106,23 @@ impl Address {
             c = ((c & 0x1ffffff) << 5) ^ (*v_i as u32);
             if c0 & 1 == 1 {
                 //     k(x) = {29}x^5 + {22}x^4 + {20}x^3 + {21}x^2 + {29}x + {18}
-                c ^= 0x3b6a57b2
-            };
-            if c0 & 2 == 1 {
+                c ^= 0x3b6a57b2;
+            }
+            if c0 & 2 == 2 {
                 //  {2}k(x) = {19}x^5 +  {5}x^4 +     x^3 +  {3}x^2 + {19}x + {13}
-                c ^= 0x26508e6d
-            };
-            if c0 & 4 == 1 {
+                c ^= 0x26508e6d;
+            }
+            if c0 & 4 == 4 {
                 //  {4}k(x) = {15}x^5 + {10}x^4 +  {2}x^3 +  {6}x^2 + {15}x + {26}
-                c ^= 0x1ea119fa
-            };
-            if c0 & 8 == 1 {
+                c ^= 0x1ea119fa;
+            }
+            if c0 & 8 == 8 {
                 //  {8}k(x) = {30}x^5 + {20}x^4 +  {4}x^3 + {12}x^2 + {30}x + {29}
-                c ^= 0x3d4233dd
-            };
-            if c0 & 16 == 1 {
+                c ^= 0x3d4233dd;
+            }
+            if c0 & 16 == 16 {
                 // {16}k(x) = {21}x^5 +     x^4 +  {8}x^3 + {24}x^2 + {21}x + {19}
-                c ^= 0x2a1462b3
+                c ^= 0x2a1462b3;
             };
         }
         c
@@ -132,6 +140,54 @@ impl Address {
 
         result[2] = 0;
         result
+    }
+
+    fn bech32_checksum(bytes: &[u8], chain: Chain) -> [u8; 6] {
+        let mut enc = Self::expand_human_readable_part(chain.hrp()).to_vec();
+        enc.extend_from_slice(bytes);
+        enc.extend_from_slice(&[0u8; 6]);
+        // let m = Self::bech32_polymod(bytes) ^ 0x2bc830a3; // Bech32m
+        let m = Self::bech32_polymod(&enc) ^ 1; // Bech32
+                                                // let m = Self::bech32_polymod(bytes) ; // Bech32
+        let mut result = [0u8; 6];
+        for (i, byte) in result.iter_mut().enumerate() {
+            *byte = ((m >> (5 * (5 - i))) as u8) & 31;
+        }
+        result
+    }
+
+    fn encode_bech32(bytes: &[u8], chain: Chain) -> String {
+        const ALPHABET: &[u8] = "qpzry9x8gf2tvdw0s3jn54khce6mua7l".as_bytes();
+        let mut number = bytes.to_vec();
+        let mut input_base_32 = Vec::new();
+        while !number.is_empty() {
+            let mut quotient_by_32 = Vec::new();
+            let mut remainder = 0;
+            for byte in number.iter() {
+                let acc = *byte as u32 + 256 * remainder;
+                let digit = acc / 32;
+                remainder = acc % 32;
+
+                if digit > 0 || !quotient_by_32.is_empty() {
+                    quotient_by_32.push(digit as u8);
+                }
+            }
+            input_base_32.push(remainder as u8);
+            number = quotient_by_32;
+        }
+        input_base_32.push(0);
+        input_base_32.reverse();
+        let checksum = Self::bech32_checksum(&input_base_32, chain.clone());
+
+        let mut result = chain.hrp().to_vec();
+        result.push(49); // Separator "1"
+        for c in input_base_32.iter() {
+            result.push(ALPHABET[*c as usize])
+        }
+        for c in checksum.iter() {
+            result.push(ALPHABET[*c as usize])
+        }
+        String::from_utf8(result).unwrap()
     }
 }
 
@@ -217,17 +273,124 @@ mod tests {
     }
 
     #[test]
+    fn test_hrp() {
+        let expected_for_testnet = b"tb";
+        let expected_for_mainnet = b"bc";
+        assert_eq!(&Chain::MainNet.hrp(), expected_for_mainnet);
+        assert_eq!(&Chain::TestNet.hrp(), expected_for_testnet);
+    }
+
+    #[test]
     fn test_expand_hrp() {
-        // testnet. The hrp is "tb"
         let expected_for_testnet = [3, 3, 0, 20, 2];
-        let result_testnet =
-            Address::expand_human_readable_part("tb".as_bytes().try_into().unwrap());
+        let result_testnet = Address::expand_human_readable_part(Chain::TestNet.hrp());
         assert_eq!(result_testnet, expected_for_testnet);
 
-        // mainnet. The hrp is "bc"
         let expected_for_mainnet = [3, 3, 0, 2, 3];
-        let result_mainnet =
-            Address::expand_human_readable_part("bc".as_bytes().try_into().unwrap());
+        let result_mainnet = Address::expand_human_readable_part(Chain::MainNet.hrp());
         assert_eq!(result_mainnet, expected_for_mainnet);
+    }
+
+    #[test]
+    fn test_polymod_2() {
+        let poly = [];
+        let expected_remainder = 1;
+
+        let remainder = Address::bech32_polymod(&poly);
+        assert_eq!(remainder, expected_remainder);
+    }
+
+    #[test]
+    fn test_polymod_3() {
+        let poly = [2];
+        let expected_remainder = 34; // (1 << 5) | 2
+
+        let remainder = Address::bech32_polymod(&poly);
+        assert_eq!(remainder, expected_remainder);
+    }
+    #[test]
+    fn test_polymod_4() {
+        let poly = [5, 1];
+        let expected_remainder = 1185; // (((1 << 5) | 5) << 5) | 1
+
+        let remainder = Address::bech32_polymod(&poly);
+        assert_eq!(remainder, expected_remainder);
+    }
+    #[test]
+    fn test_polymod_5() {
+        let poly = [5, 1, 9];
+        let expected_remainder = 37929; // (((((1 << 5) | 5) << 5) | 1) << 5) | 9
+
+        let remainder = Address::bech32_polymod(&poly);
+        assert_eq!(remainder, expected_remainder);
+    }
+
+    #[test]
+    fn test_polymod_6() {
+        let poly = [29, 22, 20, 21, 29, 18];
+        let expected_remainder = 0;
+
+        let remainder = Address::bech32_polymod(&poly);
+        assert_eq!(remainder, expected_remainder);
+    }
+
+    #[test]
+    fn test_polymod_7() {
+        let poly = [29, 22, 20, 21, 28, 16]; // k(x) + x + 2
+        let expected_remainder = 34;
+
+        let remainder = Address::bech32_polymod(&poly);
+        assert_eq!(remainder, expected_remainder);
+    }
+
+    #[test]
+    fn test_polymod_8() {
+        let poly = [29, 22, 20, 20, 24, 19]; // k(x) + x^2 + 5*x + 1
+        let expected_remainder = 1185;
+
+        let remainder = Address::bech32_polymod(&poly);
+        assert_eq!(remainder, expected_remainder);
+    }
+
+    #[test]
+    fn test_polymod_9() {
+        let poly = [29, 22, 21, 16, 28, 27]; // k(x) + x^3 + 5*x^2 + x + 9
+        let expected_remainder = 37929;
+
+        let remainder = Address::bech32_polymod(&poly);
+        assert_eq!(remainder, expected_remainder);
+    }
+
+    #[test]
+    fn test_polymod_10() {
+        let poly = [5, 1, 9, 8, 3, 9, 22];
+        let expected_remainder = 948480536;
+
+        let remainder = Address::bech32_polymod(&poly);
+        assert_eq!(remainder, expected_remainder);
+    }
+
+    #[test]
+    fn test_bech32_checksum() {
+        let bytes = [
+            0, 14, 20, 15, 7, 13, 26, 0, 25, 18, 6, 11, 13, 8, 21, 4, 20, 3, 17, 2, 29, 3, 12, 29,
+            3, 4, 15, 24, 20, 6, 14, 30, 22,
+        ];
+        let chain = Chain::MainNet;
+        let expected_checksum = [12, 7, 9, 17, 11, 21];
+        let checksum = Address::bech32_checksum(&bytes, chain);
+        assert_eq!(checksum, expected_checksum);
+    }
+
+    #[test]
+    fn test_bech32_encoding() {
+        let bytes = [
+            117, 30, 118, 232, 25, 145, 150, 212, 84, 148, 28, 69, 209, 179, 163, 35, 241, 67, 59,
+            214,
+        ];
+        let chain = Chain::MainNet;
+        let expected_string = "bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4".to_string();
+        let string = Address::encode_bech32(&bytes, chain);
+        assert_eq!(string, expected_string);
     }
 }

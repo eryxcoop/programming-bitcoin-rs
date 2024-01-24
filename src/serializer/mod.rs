@@ -10,10 +10,9 @@ pub(crate) use self::u256::U256BigEndianSerializer;
 pub(crate) use self::u256::U256DERSerializer;
 pub(crate) use self::u64::VarIntSerializer;
 
-pub use self::transaction::TransactionSerializer;
 pub use self::public_key::PublicKeyCompressedSerializer;
 pub use self::public_key::PublicKeyUncompressedSerializer;
-
+pub use self::transaction::TransactionSerializer;
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum SerializerError {}

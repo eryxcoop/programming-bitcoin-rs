@@ -1,20 +1,19 @@
-use lambdaworks_math::{cyclic_group::IsGroup, elliptic_curve::traits::IsEllipticCurve};
-
 use crate::{
     hash::{hash160, hash256},
-    random::{IsRandomScalarGenerator, RandomScalarGenerator},
-    secp256k1::curve::Secp256k1,
-    serializer::{
-        CanSerialize, PublicKeyCompressedSerializer, PublicKeyUncompressedSerializer,
-        U256BigEndianSerializer,
-    },
-    signature::{PrivateKey, PublicKey},
+    serializer::{CanSerialize, PublicKeyCompressedSerializer, PublicKeyUncompressedSerializer},
+    signature::PublicKey,
 };
 
 #[derive(Clone)]
 pub(crate) enum Chain {
     TestNet,
     MainNet,
+}
+
+pub(crate) enum Encoding {
+    CompressedBase58,
+    UncompressedBase58,
+    Bech32,
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -37,30 +36,41 @@ impl Chain {
 }
 
 impl Address {
-    fn new_random_testnet() -> (Self, PublicKey, PrivateKey) {
-        let mut rng = RandomScalarGenerator::new();
-        let private_key_u256 = rng.random_scalar().representative();
-        let private_key = U256BigEndianSerializer::serialize(&private_key_u256);
-        let public_key = Secp256k1::generator().operate_with_self(private_key_u256);
-        let address = Self::from_public_key_uncompressed(&public_key, Chain::TestNet);
-        (address, public_key, private_key)
+    pub(crate) fn new(public_key: &PublicKey, chain: Chain, encoding: Encoding) -> Self {
+        match encoding {
+            Encoding::CompressedBase58 => Self::new_compressed_base58(public_key, chain),
+            Encoding::UncompressedBase58 => Self::new_uncompressed_base58(public_key, chain),
+            Encoding::Bech32 => Self::new_bech32(public_key, chain),
+        }
     }
 
-    fn from_serialized_key(data: &[u8], chain: Chain) -> Self {
+    fn new_bech32(public_key: &PublicKey, chain: Chain) -> Self {
+        let public_key_bytes = PublicKeyCompressedSerializer::serialize(public_key);
+        let bytes = hash160(&public_key_bytes);
+        Address(Self::encode_bech32(&bytes, chain))
+    }
+
+    fn new_uncompressed_base58(public_key: &PublicKey, chain: Chain) -> Self {
+        Self::from_serialized_public_key_base58_check(
+            &PublicKeyUncompressedSerializer::serialize(public_key),
+            chain,
+        )
+    }
+
+    fn new_compressed_base58(key: &PublicKey, chain: Chain) -> Self {
+        Self::from_serialized_public_key_base58_check(
+            &PublicKeyCompressedSerializer::serialize(key),
+            chain,
+        )
+    }
+
+    fn from_serialized_public_key_base58_check(data: &[u8], chain: Chain) -> Self {
         let hash = {
             let mut hash = vec![chain.code()];
             hash.extend_from_slice(&hash160(data));
             hash
         };
         Self(Self::base58_encode_with_checksum(&hash))
-    }
-
-    fn from_public_key_compressed(key: &PublicKey, chain: Chain) -> Self {
-        Self::from_serialized_key(&PublicKeyCompressedSerializer::serialize(key), chain)
-    }
-
-    fn from_public_key_uncompressed(key: &PublicKey, chain: Chain) -> Self {
-        Self::from_serialized_key(&PublicKeyUncompressedSerializer::serialize(key), chain)
     }
 
     fn base58_encode_with_checksum(input: &[u8]) -> String {
@@ -72,24 +82,8 @@ impl Address {
 
     fn base58_encode(input: &[u8]) -> String {
         const ALPHABET: &[u8; 58] = b"123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
-        let mut number = input.to_vec();
-        let mut result = Vec::new();
-
-        while !number.is_empty() {
-            let mut quotient_by_58 = Vec::new();
-            let mut remainder = 0;
-            for byte in number.iter() {
-                let acc = *byte as u32 + 256 * remainder;
-                let digit = acc / 58;
-                remainder = acc % 58;
-
-                if digit > 0 || !quotient_by_58.is_empty() {
-                    quotient_by_58.push(digit as u8);
-                }
-            }
-            result.push(ALPHABET[remainder as usize]);
-            number = quotient_by_58;
-        }
+        let input_base = to_base::<58>(input);
+        let mut result: Vec<u8> = input_base.iter().map(|b| ALPHABET[*b as usize]).collect();
 
         for _ in input.iter().take_while(|&&byte| byte == 0) {
             result.push(0x31);
@@ -146,9 +140,8 @@ impl Address {
         let mut enc = Self::expand_human_readable_part(chain.hrp()).to_vec();
         enc.extend_from_slice(bytes);
         enc.extend_from_slice(&[0u8; 6]);
-        // let m = Self::bech32_polymod(bytes) ^ 0x2bc830a3; // Bech32m
+        // let m = Self::bech32_polymod(&enc) ^ 0x2bc830a3; // Bech32m
         let m = Self::bech32_polymod(&enc) ^ 1; // Bech32
-                                                // let m = Self::bech32_polymod(bytes) ; // Bech32
         let mut result = [0u8; 6];
         for (i, byte) in result.iter_mut().enumerate() {
             *byte = ((m >> (5 * (5 - i))) as u8) & 31;
@@ -158,23 +151,7 @@ impl Address {
 
     fn encode_bech32(bytes: &[u8], chain: Chain) -> String {
         const ALPHABET: &[u8] = "qpzry9x8gf2tvdw0s3jn54khce6mua7l".as_bytes();
-        let mut number = bytes.to_vec();
-        let mut input_base_32 = Vec::new();
-        while !number.is_empty() {
-            let mut quotient_by_32 = Vec::new();
-            let mut remainder = 0;
-            for byte in number.iter() {
-                let acc = *byte as u32 + 256 * remainder;
-                let digit = acc / 32;
-                remainder = acc % 32;
-
-                if digit > 0 || !quotient_by_32.is_empty() {
-                    quotient_by_32.push(digit as u8);
-                }
-            }
-            input_base_32.push(remainder as u8);
-            number = quotient_by_32;
-        }
+        let mut input_base_32 = to_base::<32>(bytes);
         input_base_32.push(0);
         input_base_32.reverse();
         let checksum = Self::bech32_checksum(&input_base_32, chain.clone());
@@ -191,38 +168,56 @@ impl Address {
     }
 }
 
+fn to_base<const N: u32>(bytes: &[u8]) -> Vec<u8> {
+    let mut number = bytes.to_vec();
+    let mut input_base = Vec::new();
+    while !number.is_empty() {
+        let mut quotient = Vec::new();
+        let mut remainder = 0;
+        for byte in number.iter() {
+            let acc = *byte as u32 + 256 * remainder;
+            let digit = acc / N;
+            remainder = acc % N;
+
+            if digit > 0 || !quotient.is_empty() {
+                quotient.push(digit as u8);
+            }
+        }
+        input_base.push(remainder as u8);
+        number = quotient;
+    }
+    input_base
+}
+
 #[cfg(test)]
 mod tests {
-    use lambdaworks_math::{
-        cyclic_group::IsGroup, elliptic_curve::traits::IsEllipticCurve,
-        unsigned_integer::element::U256,
-    };
+    use lambdaworks_math::unsigned_integer::element::U256;
 
-    use crate::secp256k1::curve::Secp256k1;
+    use crate::signature::PublicKey;
 
     use super::{Address, Chain};
 
     #[test]
     fn test_address_1() {
-        let public_key = Secp256k1::generator().operate_with_self(5002u64);
+        let public_key = PublicKey::from_u256(U256::from_u64(5002u64));
         let expected_address = Address("mmTPbXQFxboEtNRkwfh6K51jvdtHLxGeMA".to_string());
-        let address = Address::from_public_key_uncompressed(&public_key, Chain::TestNet);
+        let address = Address::new_uncompressed_base58(&public_key, Chain::TestNet);
         assert_eq!(address, expected_address);
     }
 
     #[test]
     fn test_address_2() {
-        let public_key = Secp256k1::generator().operate_with_self(33632321603200000u64);
+        let public_key = PublicKey::from_u256(U256::from_u64(33632321603200000u64));
         let expected_address = Address("mopVkxp8UhXqRYbCYJsbeE1h1fiF64jcoH".to_string());
-        let address = Address::from_public_key_compressed(&public_key, Chain::TestNet);
+        let address = Address::new_compressed_base58(&public_key, Chain::TestNet);
         assert_eq!(address, expected_address);
     }
 
     #[test]
     fn test_address_3() {
-        let public_key = Secp256k1::generator().operate_with_self(0x12345deadbeefu64);
+        let public_key = PublicKey::from_u256(U256::from_u64(0x12345deadbeefu64));
         let expected_address = Address("1F1Pn2y6pDb68E5nYJJeba4TLg2U7B6KF1".to_string());
-        let address = Address::from_public_key_compressed(&public_key, Chain::MainNet);
+        let address = Address::new_compressed_base58(&public_key, Chain::MainNet);
         assert_eq!(address, expected_address);
     }
 
@@ -266,8 +261,8 @@ mod tests {
             "18e14a7b6a307f426a94f8114701e7c8e774e7f9a47e2c2035db29a206321725",
         );
         let expected_address = Address("1PMycacnJaSqwwJqjawXBErnLsZ7RkXUAs".to_string());
-        let public_key = Secp256k1::generator().operate_with_self(private_key_u256);
-        let address = Address::from_public_key_compressed(&public_key, Chain::MainNet);
+        let public_key = PublicKey::from_u256(private_key_u256);
+        let address = Address::new_compressed_base58(&public_key, Chain::MainNet);
 
         assert_eq!(address, expected_address);
     }

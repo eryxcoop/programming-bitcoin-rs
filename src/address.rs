@@ -38,30 +38,20 @@ impl Chain {
 impl Address {
     pub(crate) fn new(public_key: &PublicKey, chain: Chain, encoding: Encoding) -> Self {
         match encoding {
-            Encoding::CompressedBase58 => Self::new_compressed_base58(public_key, chain),
-            Encoding::UncompressedBase58 => Self::new_uncompressed_base58(public_key, chain),
-            Encoding::Bech32 => Self::new_bech32(public_key, chain),
+            Encoding::CompressedBase58 => {
+                let public_key_bytes = &PublicKeyCompressedSerializer::serialize(public_key);
+                Self::from_serialized_public_key_base58_check(public_key_bytes, chain)
+            }
+            Encoding::UncompressedBase58 => {
+                let public_key_bytes = &PublicKeyUncompressedSerializer::serialize(public_key);
+                Self::from_serialized_public_key_base58_check(public_key_bytes, chain)
+            }
+            Encoding::Bech32 => {
+                let public_key_bytes = PublicKeyCompressedSerializer::serialize(public_key);
+                let bytes = hash160(&public_key_bytes);
+                Address(Self::encode_bech32(&bytes, chain))
+            }
         }
-    }
-
-    fn new_bech32(public_key: &PublicKey, chain: Chain) -> Self {
-        let public_key_bytes = PublicKeyCompressedSerializer::serialize(public_key);
-        let bytes = hash160(&public_key_bytes);
-        Address(Self::encode_bech32(&bytes, chain))
-    }
-
-    fn new_uncompressed_base58(public_key: &PublicKey, chain: Chain) -> Self {
-        Self::from_serialized_public_key_base58_check(
-            &PublicKeyUncompressedSerializer::serialize(public_key),
-            chain,
-        )
-    }
-
-    fn new_compressed_base58(key: &PublicKey, chain: Chain) -> Self {
-        Self::from_serialized_public_key_base58_check(
-            &PublicKeyCompressedSerializer::serialize(key),
-            chain,
-        )
     }
 
     fn from_serialized_public_key_base58_check(data: &[u8], chain: Chain) -> Self {
@@ -193,7 +183,7 @@ fn to_base<const N: u32>(bytes: &[u8]) -> Vec<u8> {
 mod tests {
     use lambdaworks_math::unsigned_integer::element::U256;
 
-    use crate::signature::PublicKey;
+    use crate::{address::Encoding, signature::PublicKey};
 
     use super::{Address, Chain};
 
@@ -201,7 +191,7 @@ mod tests {
     fn test_address_1() {
         let public_key = PublicKey::from_u256(U256::from_u64(5002u64));
         let expected_address = Address("mmTPbXQFxboEtNRkwfh6K51jvdtHLxGeMA".to_string());
-        let address = Address::new_uncompressed_base58(&public_key, Chain::TestNet);
+        let address = Address::new(&public_key, Chain::TestNet, Encoding::UncompressedBase58);
         assert_eq!(address, expected_address);
     }
 
@@ -209,7 +199,7 @@ mod tests {
     fn test_address_2() {
         let public_key = PublicKey::from_u256(U256::from_u64(33632321603200000u64));
         let expected_address = Address("mopVkxp8UhXqRYbCYJsbeE1h1fiF64jcoH".to_string());
-        let address = Address::new_compressed_base58(&public_key, Chain::TestNet);
+        let address = Address::new(&public_key, Chain::TestNet, Encoding::CompressedBase58);
         assert_eq!(address, expected_address);
     }
 
@@ -217,7 +207,7 @@ mod tests {
     fn test_address_3() {
         let public_key = PublicKey::from_u256(U256::from_u64(0x12345deadbeefu64));
         let expected_address = Address("1F1Pn2y6pDb68E5nYJJeba4TLg2U7B6KF1".to_string());
-        let address = Address::new_compressed_base58(&public_key, Chain::MainNet);
+        let address = Address::new(&public_key, Chain::MainNet, Encoding::CompressedBase58);
         assert_eq!(address, expected_address);
     }
 
@@ -262,7 +252,7 @@ mod tests {
         );
         let expected_address = Address("1PMycacnJaSqwwJqjawXBErnLsZ7RkXUAs".to_string());
         let public_key = PublicKey::from_u256(private_key_u256);
-        let address = Address::new_compressed_base58(&public_key, Chain::MainNet);
+        let address = Address::new(&public_key, Chain::MainNet, Encoding::CompressedBase58);
 
         assert_eq!(address, expected_address);
     }

@@ -37,12 +37,23 @@ impl PublicKey {
     }
 
     pub(crate) fn from_private_key(s: PrivateKey) -> Self {
-        let integer = U256::from_limbs([
-            u64::from_be_bytes([s[0], s[1], s[2], s[3], s[4], s[5], s[6], s[7]]),
-            u64::from_be_bytes([s[8], s[9], s[10], s[11], s[12], s[13], s[14], s[15]]),
-            u64::from_be_bytes([s[16], s[17], s[18], s[19], s[20], s[21], s[22], s[23]]),
-            u64::from_be_bytes([s[24], s[25], s[26], s[27], s[28], s[29], s[30], s[31]]),
-        ]);
+        let integer = {
+            let mut limbs = [0u64; 4];
+            for i in 0..4 {
+                let start = i * 8;
+                limbs[i] = u64::from_be_bytes([
+                    s[start],
+                    s[start + 1],
+                    s[start + 2],
+                    s[start + 3],
+                    s[start + 4],
+                    s[start + 5],
+                    s[start + 6],
+                    s[start + 7],
+                ])
+            }
+            U256::from_limbs(limbs)
+        };
         Self::from_u256(integer)
     }
 

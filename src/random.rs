@@ -48,6 +48,6 @@ impl IsRandomGenerator<PrivateKey> for RandomPrivateKeyGenerator {
         for byte in result.iter_mut() {
             *byte = rng.gen()
         }
-        result
+        PrivateKey::new(result)
     }
 }

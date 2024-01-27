@@ -36,7 +36,7 @@ impl EllipticCurveDigitalSignatureAlgorithm {
         random: &mut impl IsRandomGenerator<ScalarFelt>,
     ) -> ECDSASignature {
         let z = ScalarFelt::new(U256::from_bytes_be(z).unwrap());
-        let e = ScalarFelt::new(U256::from_bytes_be(&private_key).unwrap());
+        let e = ScalarFelt::new(private_key.into());
 
         loop {
             let k = random.random_scalar();
@@ -102,6 +102,7 @@ pub mod tests {
 
     use crate::{
         hash::hash256,
+        private_key::PrivateKey,
         secp256k1::{
             curve::{Point, Secp256k1},
             fields::{BaseFelt, ScalarFelt},
@@ -120,7 +121,7 @@ pub mod tests {
 
     #[test]
     fn test_signature_1() {
-        let private_key = hash256("my secret".as_bytes());
+        let private_key = PrivateKey::new(hash256("my secret".as_bytes()));
         let z = hash256("my message".as_bytes());
 
         let signature = ECDSA::sign(&z, private_key, &mut TestRandomScalarGenerator);
@@ -139,10 +140,10 @@ pub mod tests {
 
     #[test]
     fn test_signature_2() {
-        let private_key = [
+        let private_key = PrivateKey::new([
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
             0, 48, 57,
-        ];
+        ]);
         let z = hash256("Programming Bitcoin!".as_bytes());
 
         let signature = ECDSA::sign(&z, private_key, &mut TestRandomScalarGenerator);

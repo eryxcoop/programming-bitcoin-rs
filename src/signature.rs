@@ -1,4 +1,6 @@
 use crate::{
+    private_key::PrivateKey,
+    public_key::PublicKey,
     random::IsRandomGenerator,
     secp256k1::{
         curve::{Point, Secp256k1},
@@ -19,49 +21,6 @@ pub(crate) struct EllipticCurveDigitalSignatureAlgorithm;
 pub(crate) struct ECDSASignature {
     pub(crate) r: ScalarFelt,
     pub(crate) s: ScalarFelt,
-}
-
-pub type PrivateKey = [u8; 32];
-
-#[derive(Debug)]
-pub struct PublicKey {
-    point: Point,
-}
-
-impl PublicKey {
-    pub(crate) fn new(point: Point) -> Self {
-        Self { point }
-    }
-
-    pub(crate) fn from_u256(integer: U256) -> Self {
-        let point = Secp256k1::generator().operate_with_self(integer);
-        Self::new(point)
-    }
-
-    pub fn from_private_key(s: PrivateKey) -> Self {
-        let integer = {
-            let mut limbs = [0u64; 4];
-            for i in 0..4 {
-                let start = i * 8;
-                limbs[i] = u64::from_be_bytes([
-                    s[start],
-                    s[start + 1],
-                    s[start + 2],
-                    s[start + 3],
-                    s[start + 4],
-                    s[start + 5],
-                    s[start + 6],
-                    s[start + 7],
-                ])
-            }
-            U256::from_limbs(limbs)
-        };
-        Self::from_u256(integer)
-    }
-
-    pub(crate) fn point(&self) -> &Point {
-        &self.point
-    }
 }
 
 impl ECDSASignature {

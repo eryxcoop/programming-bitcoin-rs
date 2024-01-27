@@ -1,5 +1,7 @@
 pub mod address;
 pub mod hash;
+pub mod private_key;
+pub mod public_key;
 pub mod random;
 pub mod secp256k1;
 pub mod serializer;

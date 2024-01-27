@@ -1,7 +1,6 @@
 use crate::{
     hash::{hash160, hash256},
-    serializer::{CanSerialize, PublicKeyCompressedSerializer, PublicKeyUncompressedSerializer},
-    signature::PublicKey,
+    serializer::{PublicKeyCompressedSerializer, PublicKeyUncompressedSerializer, CanSerialize}, public_key::PublicKey,
 };
 
 #[derive(Clone)]
@@ -183,7 +182,7 @@ fn to_base<const N: u32>(bytes: &[u8]) -> Vec<u8> {
 mod tests {
     use lambdaworks_math::unsigned_integer::element::U256;
 
-    use crate::{address::Encoding, signature::PublicKey};
+    use crate::{address::Encoding, public_key::PublicKey};
 
     use super::{Address, Chain};
 

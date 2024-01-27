@@ -6,7 +6,7 @@ use lambdaworks_math::{
     unsigned_integer::element::U256,
 };
 
-use crate::signature::PublicKey;
+use crate::public_key::PublicKey;
 
 use super::{CanSerialize, U256BigEndianSerializer};
 
@@ -81,8 +81,7 @@ mod tests {
                 FeltSerializer, PublicKeyCompressedSerializer, PublicKeyUncompressedSerializer,
             },
             CanSerialize,
-        },
-        signature::PublicKey,
+        }, public_key::PublicKey,
     };
 
     #[test]

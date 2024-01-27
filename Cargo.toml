@@ -3,10 +3,17 @@ name = "programming-bitcoin-rs"
 version = "0.1.0"
 edition = "2021"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[lib]
+path = "src/lib.rs"
 
 [dependencies]
 lambdaworks-math = {git="https://github.com/schouhy/lambdaworks.git", branch="fix-inv-overflow"}
 rand = "0.8.5"
 sha2 = "0.10"
 ripemd = "0.1.3"
+
+[[example]]
+name = "example_usage"
+path = "examples/main.rs"
+
+

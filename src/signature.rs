@@ -21,8 +21,10 @@ pub(crate) struct ECDSASignature {
     pub(crate) s: ScalarFelt,
 }
 
-pub(crate) type PrivateKey = [u8; 32];
-pub(crate) struct PublicKey {
+pub type PrivateKey = [u8; 32];
+
+#[derive(Debug)]
+pub struct PublicKey {
     point: Point,
 }
 
@@ -36,7 +38,7 @@ impl PublicKey {
         Self::new(point)
     }
 
-    pub(crate) fn from_private_key(s: PrivateKey) -> Self {
+    pub fn from_private_key(s: PrivateKey) -> Self {
         let integer = {
             let mut limbs = [0u64; 4];
             for i in 0..4 {

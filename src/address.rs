@@ -5,19 +5,19 @@ use crate::{
 };
 
 #[derive(Clone)]
-pub(crate) enum Chain {
+pub enum Chain {
     TestNet,
     MainNet,
 }
 
-pub(crate) enum Encoding {
+pub enum Encoding {
     CompressedBase58,
     UncompressedBase58,
     Bech32,
 }
 
 #[derive(Debug, PartialEq, Eq)]
-pub(crate) struct Address(String);
+pub struct Address(String);
 
 impl Chain {
     fn code(self) -> u8 {
@@ -36,7 +36,7 @@ impl Chain {
 }
 
 impl Address {
-    pub(crate) fn new(public_key: &PublicKey, chain: Chain, encoding: Encoding) -> Self {
+    pub fn new(public_key: &PublicKey, chain: Chain, encoding: Encoding) -> Self {
         match encoding {
             Encoding::CompressedBase58 => {
                 let public_key_bytes = &PublicKeyCompressedSerializer::serialize(public_key);

@@ -72,6 +72,7 @@ mod tests {
     };
 
     use crate::{
+        public_key::PublicKey,
         secp256k1::{
             curve::{Point, Secp256k1},
             fields::BaseFelt,
@@ -81,7 +82,7 @@ mod tests {
                 FeltSerializer, PublicKeyCompressedSerializer, PublicKeyUncompressedSerializer,
             },
             CanSerialize,
-        }, public_key::PublicKey,
+        },
     };
 
     #[test]

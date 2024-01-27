@@ -1,9 +1,14 @@
-pub mod address;
-pub mod hash;
-pub mod private_key;
-pub mod public_key;
-pub mod random;
-pub mod secp256k1;
-pub mod serializer;
-pub mod signature;
-pub mod transaction;
+mod address;
+mod byte_array;
+mod hash;
+mod public_key;
+mod private_key;
+mod random;
+mod secp256k1;
+mod serializer;
+mod signature;
+mod transaction;
+
+pub use address::{Address, Chain, Encoding};
+pub use public_key::PublicKey;
+pub use private_key::PrivateKey;

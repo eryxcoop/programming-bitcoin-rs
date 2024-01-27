@@ -1,19 +1,19 @@
 use crate::{
-    private_key::PrivateKey,
-    public_key::PublicKey,
+    byte_array::ByteArrayOfLength32,
     random::IsRandomGenerator,
     secp256k1::{
-        curve::{Point, Secp256k1},
+        curve::Secp256k1,
         fields::{BaseFelt, ScalarFelt, ScalarFieldModulus},
     },
+    PrivateKey, PublicKey,
 };
 use lambdaworks_math::{
     cyclic_group::IsGroup,
     elliptic_curve::{short_weierstrass::traits::IsShortWeierstrass, traits::IsEllipticCurve},
     field::fields::montgomery_backed_prime_fields::IsModulus,
-    traits::ByteConversion,
-    unsigned_integer::element::U256,
 };
+
+pub(crate) type Message = ByteArrayOfLength32;
 
 pub(crate) struct EllipticCurveDigitalSignatureAlgorithm;
 
@@ -31,11 +31,11 @@ impl ECDSASignature {
 
 impl EllipticCurveDigitalSignatureAlgorithm {
     fn sign(
-        z: &[u8; 32],
+        message: &Message,
         private_key: PrivateKey,
         random: &mut impl IsRandomGenerator<ScalarFelt>,
     ) -> ECDSASignature {
-        let z = ScalarFelt::new(U256::from_bytes_be(z).unwrap());
+        let z = ScalarFelt::new(message.into());
         let e = ScalarFelt::new(private_key.into());
 
         loop {
@@ -55,7 +55,7 @@ impl EllipticCurveDigitalSignatureAlgorithm {
         }
     }
 
-    fn verify(z: &[u8; 32], signature: ECDSASignature, public_key: PublicKey) -> bool {
+    fn verify(message: &Message, signature: ECDSASignature, public_key: PublicKey) -> bool {
         if public_key.point.z() == &BaseFelt::zero() {
             return false;
         }
@@ -74,7 +74,7 @@ impl EllipticCurveDigitalSignatureAlgorithm {
 
         if signature.r != ScalarFelt::zero() {
             if let Ok(s_inv) = signature.s.inv() {
-                let z = ScalarFelt::new(U256::from_bytes_be(z).unwrap());
+                let z = ScalarFelt::new(message.into());
                 let u = z * &s_inv;
                 let v = &signature.r * s_inv;
                 let point = Secp256k1::generator()
@@ -102,12 +102,14 @@ pub mod tests {
 
     use crate::{
         hash::hash256,
-        private_key::PrivateKey,
         secp256k1::{
             curve::{Point, Secp256k1},
             fields::{BaseFelt, ScalarFelt},
         },
-        signature::{ECDSASignature, EllipticCurveDigitalSignatureAlgorithm as ECDSA, PublicKey},
+        signature::{
+            ECDSASignature, EllipticCurveDigitalSignatureAlgorithm as ECDSA, Message, PublicKey,
+        },
+        PrivateKey,
     };
 
     use super::IsRandomGenerator;
@@ -122,7 +124,7 @@ pub mod tests {
     #[test]
     fn test_signature_1() {
         let private_key = PrivateKey::new(hash256("my secret".as_bytes()));
-        let z = hash256("my message".as_bytes());
+        let z = Message::new(hash256("my message".as_bytes()));
 
         let signature = ECDSA::sign(&z, private_key, &mut TestRandomScalarGenerator);
 
@@ -144,7 +146,7 @@ pub mod tests {
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
             0, 48, 57,
         ]);
-        let z = hash256("Programming Bitcoin!".as_bytes());
+        let z = Message::new(hash256("Programming Bitcoin!".as_bytes()));
 
         let signature = ECDSA::sign(&z, private_key, &mut TestRandomScalarGenerator);
 
@@ -162,7 +164,7 @@ pub mod tests {
 
     #[test]
     fn test_verify_signature_1() {
-        let z = hash256("my message".as_bytes());
+        let z = Message::new(hash256("my message".as_bytes()));
 
         // public key corresponding to the private key = `hash256("my secret".as_bytes())`
         let public_key = PublicKey::new(
@@ -191,10 +193,10 @@ pub mod tests {
 
     #[test]
     fn test_verify_signature_2() {
-        let z = [
+        let z = Message::new([
             236, 32, 139, 170, 15, 193, 193, 159, 112, 138, 156, 169, 111, 222, 255, 58, 195, 242,
             48, 187, 74, 123, 164, 174, 222, 73, 66, 173, 0, 60, 15, 96,
-        ];
+        ]);
 
         let public_key = PublicKey::new(
             Point::from_affine(
@@ -222,10 +224,10 @@ pub mod tests {
 
     #[test]
     fn test_verify_signature_3() {
-        let z = [
+        let z = Message::new([
             124, 7, 111, 243, 22, 105, 42, 61, 126, 179, 195, 187, 15, 139, 20, 136, 207, 114, 225,
             175, 205, 146, 158, 41, 48, 112, 50, 153, 122, 131, 138, 61,
-        ];
+        ]);
 
         let public_key = PublicKey::new(
             Point::from_affine(
@@ -253,7 +255,7 @@ pub mod tests {
 
     #[test]
     fn test_verify_invalid_signature() {
-        let z = hash256("my message".as_bytes());
+        let z = Message::new(hash256("my message".as_bytes()));
 
         // public key corresponding to the private key = `hash256("my secret".as_bytes())`
         let mut public_key = PublicKey::new(

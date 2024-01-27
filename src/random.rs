@@ -4,7 +4,7 @@ use lambdaworks_math::{
 
 use crate::{
     secp256k1::fields::{ScalarFelt, ScalarFieldModulus},
-    private_key::PrivateKey,
+    PrivateKey,
 };
 use rand::Rng;
 

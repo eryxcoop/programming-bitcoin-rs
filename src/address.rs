@@ -1,6 +1,7 @@
 use crate::{
     hash::{hash160, hash256},
-    serializer::{PublicKeyCompressedSerializer, PublicKeyUncompressedSerializer, CanSerialize}, public_key::PublicKey,
+    public_key::PublicKey,
+    serializer::{CanSerialize, PublicKeyCompressedSerializer, PublicKeyUncompressedSerializer},
 };
 
 #[derive(Clone)]

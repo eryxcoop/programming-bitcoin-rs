@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use crate::{
     hash::{hash160, hash256},
     public_key::PublicKey,
@@ -155,6 +157,12 @@ impl Address {
             result.push(ALPHABET[*c as usize])
         }
         String::from_utf8(result).unwrap()
+    }
+}
+
+impl Display for Address {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
     }
 }
 

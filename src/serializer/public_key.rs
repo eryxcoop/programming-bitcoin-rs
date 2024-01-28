@@ -8,13 +8,13 @@ use lambdaworks_math::{
 
 use crate::public_key::PublicKey;
 
-use super::{CanSerialize, U256BigEndianSerializer};
+use super::{CanParse, CanSerialize, U256BigEndianSerializer};
 
 pub(crate) struct FeltSerializer;
 
-pub struct PublicKeyCompressedSerializer;
+pub(crate) struct PublicKeyCompressedSerializer;
 
-pub struct PublicKeyUncompressedSerializer;
+pub(crate) struct PublicKeyUncompressedSerializer;
 
 impl<M> CanSerialize<FieldElement<MontgomeryBackendPrimeField<M, 4>>> for FeltSerializer
 where
@@ -63,6 +63,7 @@ impl CanSerialize<PublicKey> for PublicKeyUncompressedSerializer {
         result
     }
 }
+
 
 #[cfg(test)]
 mod tests {

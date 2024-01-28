@@ -5,7 +5,7 @@ use crate::{
 
 use super::{read_bytes, CanParse, CanSerialize, ParserError, ScriptSerializer};
 
-pub struct TransactionSerializer;
+pub(crate) struct TransactionSerializer;
 
 impl TransactionSerializer {
     fn serialize_input(input: &Input) -> Vec<u8> {

@@ -1,3 +1,8 @@
+use crate::{
+    serializer::{CanSerialize, PublicKeyCompressedSerializer, PublicKeyUncompressedSerializer},
+    PublicKey,
+};
+
 pub(crate) type TransactionId = [u8; 32];
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -48,6 +53,18 @@ impl Script {
         } else {
             Err(ScriptError::InvalidCommandsError)
         }
+    }
+
+    pub fn p2pk(public_key: &PublicKey, compressed: bool) -> Self {
+        let mut commands = Vec::new();
+        let serialized_public_key = if compressed {
+            PublicKeyCompressedSerializer::serialize(public_key).to_vec()
+        } else {
+            PublicKeyUncompressedSerializer::serialize(public_key).to_vec()
+        };
+        commands.push(Command::Element(serialized_public_key));
+        commands.push(Command::Operation(0xac));
+        Self { commands }
     }
 
     pub fn empty() -> Self {

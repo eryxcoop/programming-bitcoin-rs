@@ -109,10 +109,10 @@ impl Transaction {
 
 #[cfg(test)]
 mod test {
-    use lambdaworks_math::elliptic_curve::traits::IsEllipticCurve;
+    
 
     use crate::{
-        secp256k1::{curve::Secp256k1, fields::BaseFelt},
+        serializer::{CanParse, U256BigEndianSerializer},
         PublicKey,
     };
 
@@ -173,15 +173,17 @@ mod test {
     }
 
     #[test]
-    fn test_p2pk() {
-        let x = BaseFelt::from_hex_unchecked(
-            "a34b99f22c790c4e36b2b3c2c35a36db06226e41c692fc82b8b56ac1c540c5bd",
+    fn test_p2pk_compressed() {
+        // Extracted from test vectors in https://github.com/bitcoin/bips/blob/master/bip-0381.mediawiki
+        // pk(L4rK1yDtCWekvXuE6oXD9jCYfFNV2cWRpVuPLBcCU2z8TrisoyY1) = 2103a34b99f22c790c4e36b2b3c2c35a36db06226e41c692fc82b8b56ac1c540c5bdac
+        let public_key = PublicKey::from_u256(
+            U256BigEndianSerializer::parse(&[
+                227, 176, 196, 66, 152, 252, 28, 20, 154, 251, 244, 200, 153, 111, 185, 36, 39,
+                174, 65, 228, 100, 155, 147, 76, 164, 149, 153, 27, 120, 82, 184, 85, 1,
+            ])
+            .unwrap()
+            .0,
         );
-        let y = BaseFelt::from_hex_unchecked(
-            "5b8dec5235a0fa8722476c7709c02559e3aa73aa03918ba2d492eea75abea235",
-        );
-        let point = Secp256k1::create_point_from_affine(x, y).unwrap();
-        let public_key = PublicKey::new(point);
         let expected_script = Script::new(vec![
             Command::Element(vec![
                 3, 163, 75, 153, 242, 44, 121, 12, 78, 54, 178, 179, 194, 195, 90, 54, 219, 6, 34,
@@ -192,6 +194,34 @@ mod test {
         .unwrap();
 
         let script = Script::p2pk(&public_key, true);
+        assert_eq!(script, expected_script);
+    }
+
+    #[test]
+    fn test_p2pk_uncompressed() {
+        // Extracted from test vectors in https://github.com/bitcoin/bips/blob/master/bip-0381.mediawiki
+        // pk(5KYZdUEo39z3FPrtuX2QbbwGnNP5zTd7yyr2SC1j299sBCnWjss) = 4104a34b99f22c790c4e36b2b3c2c35a36db06226e41c692fc82b8b56ac1c540c5bd5b8dec5235a0fa8722476c7709c02559e3aa73aa03918ba2d492eea75abea235ac
+
+        let public_key = PublicKey::from_u256(
+            U256BigEndianSerializer::parse(&[
+                227, 176, 196, 66, 152, 252, 28, 20, 154, 251, 244, 200, 153, 111, 185, 36, 39,
+                174, 65, 228, 100, 155, 147, 76, 164, 149, 153, 27, 120, 82, 184, 85,
+            ])
+            .unwrap()
+            .0,
+        );
+        let expected_script = Script::new(vec![
+            Command::Element(vec![
+                4, 163, 75, 153, 242, 44, 121, 12, 78, 54, 178, 179, 194, 195, 90, 54, 219, 6, 34,
+                110, 65, 198, 146, 252, 130, 184, 181, 106, 193, 197, 64, 197, 189, 91, 141, 236,
+                82, 53, 160, 250, 135, 34, 71, 108, 119, 9, 192, 37, 89, 227, 170, 115, 170, 3,
+                145, 139, 162, 212, 146, 238, 167, 90, 190, 162, 53,
+            ]),
+            Command::Operation(0xac),
+        ])
+        .unwrap();
+
+        let script = Script::p2pk(&public_key, false);
         assert_eq!(script, expected_script);
     }
 }

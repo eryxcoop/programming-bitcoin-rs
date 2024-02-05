@@ -1,4 +1,5 @@
 use lambdaworks_math::{
+    elliptic_curve::{short_weierstrass::traits::IsShortWeierstrass, traits::IsEllipticCurve},
     field::{
         element::FieldElement,
         fields::montgomery_backed_prime_fields::{IsModulus, MontgomeryBackendPrimeField},
@@ -6,9 +7,12 @@ use lambdaworks_math::{
     unsigned_integer::element::U256,
 };
 
-use crate::public_key::PublicKey;
+use crate::{
+    public_key::PublicKey,
+    secp256k1::{curve::Secp256k1, fields::BaseFelt},
+};
 
-use super::{CanParse, CanSerialize, U256BigEndianSerializer};
+use super::{read_bytes, CanParse, CanSerialize, ParserError, U256BigEndianSerializer};
 
 pub(crate) struct FeltSerializer;
 
@@ -64,6 +68,28 @@ impl CanSerialize<PublicKey> for PublicKeyUncompressedSerializer {
     }
 }
 
+impl CanParse<PublicKey> for PublicKeyCompressedSerializer {
+    fn parse(bytes: &[u8]) -> Result<(PublicKey, usize), ParserError> {
+        let flag = read_bytes::<1>(bytes)?[0];
+        let serialized_x = read_bytes::<32>(&bytes[1..])?;
+        let x = BaseFelt::new(U256BigEndianSerializer::parse(&serialized_x)?.0);
+        if let Some((y1, y2)) = (x.pow(3u64) + Secp256k1::a() * &x + Secp256k1::b()).sqrt() {
+            let (y1, y2) = if y1.representative().limbs[3] & 1 == 0 {
+                (y1, y2)
+            } else {
+                (y2, y1)
+            };
+            let point = if flag == 2 {
+                Secp256k1::create_point_from_affine(x, y1).map_err(|_| ParserError::ParseError)?
+            } else {
+                Secp256k1::create_point_from_affine(x, y2).map_err(|_| ParserError::ParseError)?
+            };
+            Ok((PublicKey::new(point), 1 + 32))
+        } else {
+            Err(ParserError::ParseError)
+        }
+    }
+}
 
 #[cfg(test)]
 mod tests {
@@ -82,7 +108,7 @@ mod tests {
             public_key::{
                 FeltSerializer, PublicKeyCompressedSerializer, PublicKeyUncompressedSerializer,
             },
-            CanSerialize,
+            CanParse, CanSerialize,
         },
     };
 
@@ -235,5 +261,23 @@ mod tests {
         ];
         let serialized_public_key = PublicKeyCompressedSerializer::serialize(&public_key);
         assert_eq!(serialized_public_key, expected_bytes);
+    }
+
+    #[test]
+    fn test_parse_public_key_compressed_sec_1() {
+        let bytes = [
+            3, 163, 75, 153, 242, 44, 121, 12, 78, 54, 178, 179, 194, 195, 90, 54, 219, 6, 34, 110,
+            65, 198, 146, 252, 130, 184, 181, 106, 193, 197, 64, 197, 189,
+        ];
+        let x = BaseFelt::from_hex_unchecked(
+            "a34b99f22c790c4e36b2b3c2c35a36db06226e41c692fc82b8b56ac1c540c5bd",
+        );
+        let y = BaseFelt::from_hex_unchecked(
+            "5b8dec5235a0fa8722476c7709c02559e3aa73aa03918ba2d492eea75abea235",
+        );
+        let expected_public_key =
+            PublicKey::new(Secp256k1::create_point_from_affine(x, y).unwrap());
+        let public_key = PublicKeyCompressedSerializer::parse(&bytes).unwrap().0;
+        assert_eq!(public_key, expected_public_key);
     }
 }

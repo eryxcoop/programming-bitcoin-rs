@@ -77,9 +77,9 @@ impl Address {
         let input_base = to_base::<58>(input);
         let mut result: Vec<u8> = input_base.iter().map(|b| ALPHABET[*b as usize]).collect();
 
-        for _ in input.iter().take_while(|&&byte| byte == 0) {
-            result.push(0x31);
-        }
+        let number_leading_zero_bytes = input.iter().take_while(|&&byte| byte == 0).count();
+        result.resize(number_leading_zero_bytes + result.len(), 0x31);
+
         result.reverse();
 
         String::from_utf8(result).unwrap()

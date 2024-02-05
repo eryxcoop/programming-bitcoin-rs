@@ -1,6 +1,6 @@
-use lambdaworks_math::unsigned_integer::element::U256;
+use lambdaworks_math::{traits::ByteConversion, unsigned_integer::element::U256};
 
-use super::CanSerialize;
+use super::{CanParse, CanSerialize, ParserError};
 
 pub(crate) struct U256BigEndianSerializer;
 pub(crate) struct U256DERSerializer;
@@ -39,6 +39,15 @@ impl CanSerialize<U256> for U256DERSerializer {
         result.extend(serialized);
 
         result
+    }
+}
+
+impl CanParse<U256> for U256BigEndianSerializer {
+    fn parse(bytes: &[u8]) -> Result<(U256, usize), ParserError> {
+        Ok((
+            U256::from_bytes_be(&bytes[..32]).map_err(|_| ParserError::ParseError)?,
+            32,
+        ))
     }
 }
 

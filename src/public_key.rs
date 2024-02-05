@@ -7,7 +7,7 @@ use crate::{
     PrivateKey,
 };
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct PublicKey {
     pub(crate) point: Point,
 }

@@ -109,6 +109,13 @@ impl Transaction {
 
 #[cfg(test)]
 mod test {
+    use lambdaworks_math::elliptic_curve::traits::IsEllipticCurve;
+
+    use crate::{
+        secp256k1::{curve::Secp256k1, fields::BaseFelt},
+        PublicKey,
+    };
+
     use super::{Command, Script};
 
     #[test]
@@ -163,5 +170,28 @@ mod test {
             Command::Operation(107),
         ];
         let _ = Script::new(commands).unwrap_err();
+    }
+
+    #[test]
+    fn test_p2pk() {
+        let x = BaseFelt::from_hex_unchecked(
+            "a34b99f22c790c4e36b2b3c2c35a36db06226e41c692fc82b8b56ac1c540c5bd",
+        );
+        let y = BaseFelt::from_hex_unchecked(
+            "5b8dec5235a0fa8722476c7709c02559e3aa73aa03918ba2d492eea75abea235",
+        );
+        let point = Secp256k1::create_point_from_affine(x, y).unwrap();
+        let public_key = PublicKey::new(point);
+        let expected_script = Script::new(vec![
+            Command::Element(vec![
+                3, 163, 75, 153, 242, 44, 121, 12, 78, 54, 178, 179, 194, 195, 90, 54, 219, 6, 34,
+                110, 65, 198, 146, 252, 130, 184, 181, 106, 193, 197, 64, 197, 189,
+            ]),
+            Command::Operation(0xac),
+        ])
+        .unwrap();
+
+        let script = Script::p2pk(&public_key, true);
+        assert_eq!(script, expected_script);
     }
 }

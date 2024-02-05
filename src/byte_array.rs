@@ -14,9 +14,9 @@ impl From<&ByteArrayOfLength32> for U256 {
     fn from(private_key: &ByteArrayOfLength32) -> Self {
         let bytes = private_key.bytes;
         let mut limbs = [0u64; 4];
-        for i in 0..4 {
+        for (i, limb) in limbs.iter_mut().enumerate() {
             let start = i * 8;
-            limbs[i] = u64::from_be_bytes([
+            *limb = u64::from_be_bytes([
                 bytes[start],
                 bytes[start + 1],
                 bytes[start + 2],

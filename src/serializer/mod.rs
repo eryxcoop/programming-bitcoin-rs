@@ -12,7 +12,6 @@ pub(crate) use self::u64::VarIntSerializer;
 
 pub(crate) use self::public_key::PublicKeyCompressedSerializer;
 pub(crate) use self::public_key::PublicKeyUncompressedSerializer;
-pub(crate) use self::transaction::TransactionSerializer;
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum SerializerError {}
